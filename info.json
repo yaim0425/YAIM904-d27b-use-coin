@@ -1,0 +1,13 @@
+{
+  "name": "YAIM0425-d27b-recipes-to-compacted-items",
+  "version": "0.0.1",
+  "title": "YAIM0425 d27b Recipes to compacted items",
+  "author": "YAIM0425",
+  "factorio_version": "2.0",
+  "description": "Create recipes to compacted items. [[I accept suggestions]]",
+  "homepage": "https://github.com/yaim0425/YAIM0425-d27b-recipes-to-compacted-items",
+  "dependencies": [
+    "YAIM0425-d00b-core",
+    "YAIM0425-d12b-compactors"
+  ]
+}
