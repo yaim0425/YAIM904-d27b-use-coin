@@ -139,12 +139,15 @@ function This_MOD.get_elements()
         --- Obtiener la información
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
+        --- Renombrar
         local Spaces = This_MOD.to_be_processed
         local Item_do = GMOD.items[recipe.results[1].name]
         local Item_undo = GMOD.items[recipe.ingredients[1].name]
 
+        --- Equivalencia del item
         Spaces.items[Item_undo.name] = Item_do
 
+        --- Recetas a duplicar
         for _, Recipe in pairs(GMOD.recipes[Item_undo]) do
             if not GMOD.has_id(Recipe.name, d12b.id) then
                 Spaces.recipes[Recipe.name] = Recipe
