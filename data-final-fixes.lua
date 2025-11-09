@@ -134,11 +134,10 @@ function This_MOD.get_elements()
 
                 local Aux, i = "", 0
                 while data.raw.recipe[Result .. Aux] do
-                    Aux = "-" .. i
-                    i = i + 1
+                    Aux, i = "-" .. i, i + 1
                 end
 
-                Recipes[Result] = Recipe
+                Recipes[Result .. Aux] = Recipe
             until true
         end
 
