@@ -79,7 +79,7 @@ function This_MOD.reference_values()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     --- Contenedor de los elementos que el MOD modoficará
-    This_MOD.to_be_processed = { items = {}, recipes = {} }
+    This_MOD.to_be_processed = {}
 
     --- Validar si se cargó antes
     if This_MOD.setting then return end
@@ -96,6 +96,19 @@ function This_MOD.reference_values()
 
     --- Cargar la configuración
     This_MOD.setting = GMOD.setting[This_MOD.id] or {}
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Valores de la referencia en este MOD
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Lista de los items y su equvalente comprimido
+    This_MOD.items = {}
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -129,6 +142,33 @@ function This_MOD.get_elements()
         if #recipe.ingredients ~= 1 then return end
         if #recipe.results ~= 1 then return end
 
+        --- Validar si ya fue procesado
+        local That_MOD =
+            GMOD.get_id_and_name(recipe.name) or
+            { ids = "-", name = recipe.name }
+
+        local Name =
+            GMOD.name .. That_MOD.ids ..
+            This_MOD.id .. "-" ..
+            That_MOD.name
+
+        if data.raw.recipe[Name] then return end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Guardar la información
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        This_MOD.to_be_processed[recipe.type] = This_MOD.to_be_processed[recipe.type] or {}
+
+        local Recipes = This_MOD.to_be_processed[recipe.type].recipes or {}
+        This_MOD.to_be_processed[recipe.type].recipes = Recipes
+
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
@@ -140,17 +180,16 @@ function This_MOD.get_elements()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         --- Renombrar
-        local Spaces = This_MOD.to_be_processed
         local Item_do = GMOD.items[recipe.results[1].name]
         local Item_undo = GMOD.items[recipe.ingredients[1].name]
 
-        --- Equivalencia del item
-        Spaces.items[Item_undo.name] = Item_do
+        --- Enlistar el item
+        This_MOD.items[Item_undo.name] = Item_do
 
         --- Recetas a duplicar
-        for _, Recipe in pairs(GMOD.recipes[Item_undo]) do
+        for _, Recipe in pairs(data.raw.recipe) do
             if not GMOD.has_id(Recipe.name, d12b.id) then
-                Spaces.recipes[Recipe.name] = Recipe
+                Recipes[Recipe.name] = Recipe
             end
         end
 
@@ -178,7 +217,7 @@ end
 ---------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------
 
-function This_MOD.create_recipe(space)
+function This_MOD.create_recipe(recipe)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     ---
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
