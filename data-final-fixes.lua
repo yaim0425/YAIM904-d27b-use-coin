@@ -39,8 +39,8 @@ function This_MOD.start()
     --- Valores de la referencia
     This_MOD.reference_values()
 
-    -- --- Obtener los elementos
-    -- This_MOD.get_elements()
+    --- Obtener los elementos
+    This_MOD.get_elements()
 
     -- --- Modificar los elementos
     -- for _, spaces in pairs(This_MOD.to_be_processed) do
@@ -129,33 +129,6 @@ function This_MOD.get_elements()
         if #recipe.ingredients ~= 1 then return end
         if #recipe.results ~= 1 then return end
 
-        --- Renombrar
-        local Item = GMOD.items[recipe.ingredients[1].name]
-        local Item_do = GMOD.items[recipe.results[1].name]
-
-        --- Calcular la cantidad
-        local Amount = d12b.setting.amount
-        if d12b.setting.stack_size then
-            Amount = Amount * Item.stack_size
-            if Amount > 65000 then
-                Amount = 65000
-            end
-        end
-
-        --- Validar si ya fue procesado
-        if GMOD.has_id(Item_do.name, This_MOD.id) then return end
-
-        local That_MOD =
-            GMOD.get_id_and_name(Item_do.name) or
-            { ids = "-", name = Item_do.name }
-
-        local Name =
-            GMOD.name .. That_MOD.ids ..
-            This_MOD.id .. "-" ..
-            That_MOD.name
-
-        if GMOD.items[Name] then return end
-
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
@@ -163,115 +136,12 @@ function This_MOD.get_elements()
 
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Valores para el proceso
+        --- Obtiener la información
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         local Space = {}
-
-        Space.name = Name
-
-        Space.item = Item
-        Space.amount = Amount
-        Space.item_do = Item_do
-
-        Space.recipe_do = recipe
-        Space.recipe_undo = recipe.name:gsub(
-            d12b.category_do .. "%-",
-            d12b.category_undo .. "-"
-        )
-        Space.recipe_undo = data.raw.recipe[Space.recipe_undo]
-
-        Space.tech = GMOD.get_technology({ Space.recipe_undo }, true)
-
-        Space.localised_name = Item.localised_name
-        Space.localised_description = Item.localised_description
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Validar el elemento a afectar
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        if Item.place_result then
-            Space.entity = GMOD.entities[Item.place_result]
-            if not Space.entity then return end
-            if This_MOD.ignore_to_name[Space.entity.name] then return end
-
-            if Space.entity.type == "accumulator" then
-                if not Space.entity.energy_source then return end
-                if not Space.entity.energy_source.output_flow_limit then return end
-                local Energy = Space.entity.energy_source.output_flow_limit
-                Energy = GMOD.number_unit(Energy)
-                if not Energy then return end
-            else
-                if not This_MOD.effect_to_type[Space.entity.type] then return end
-            end
-        end
-
-        if Item.place_as_tile then
-            Space.tiles = GMOD.tiles[Item.name]
-            if not Space.tiles then return end
-        end
-
-        if Item.place_as_equipment_result then
-            for _, equipment in pairs(GMOD.equipments) do
-                repeat
-                    if Item.place_as_equipment_result ~= equipment.name then break end
-                    if not This_MOD.effect_to_type[equipment.type] then break end
-                    if not equipment.power then
-                        local energy = equipment.energy_source
-                        if energy and not energy.buffer_capacity then
-                            break
-                        end
-                    end
-
-                    Space.equipment = equipment
-                until true
-                if Space.equipment then break end
-            end
-            if not Space.equipment then return end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        repeat
-            if This_MOD.effect_to_type[Item.type] then break end
-            if Item.fuel_value then break end
-            if Item.place_as_equipment_result then break end
-            if Item.place_as_tile then break end
-            if Item.place_result then break end
-            return
-        until true
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Belts = {
-            ["underground-belt"] = true,
-            ["lane-splitter"] = true,
-            ["loader-1x1"] = true
-        }
-
-        repeat
-            if not Space.entity then break end
-            if not Belts[Space.entity.type] then break end
-
-            local Find = Space.entity.type:gsub("%-", "%%-")
-            local Belt = Space.item.name:gsub(Find, "transport-belt")
-            Belt = GMOD.items[Belt]
-            if not Belt then break end
-
-            Space.belt = d12b.setting.amount
-            if d12b.setting.stack_size then
-                Space.belt = Space.belt * Belt.stack_size
-                if Space.belt > 65000 then
-                    Space.belt = 65000
-                end
-            end
-        until true
+        Space.item_do = GMOD.items[recipe.results[1].name]
+        Space.item_undo = GMOD.items[recipe.ingredients[1].name]
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -284,7 +154,7 @@ function This_MOD.get_elements()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         This_MOD.to_be_processed[recipe.type] = This_MOD.to_be_processed[recipe.type] or {}
-        This_MOD.to_be_processed[recipe.type][Name] = Space
+        This_MOD.to_be_processed[recipe.type][Space.item_undo.name] = Space
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
