@@ -79,7 +79,7 @@ function This_MOD.reference_values()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     --- Contenedor de los elementos que el MOD modoficará
-    This_MOD.to_be_processed = {}
+    This_MOD.to_be_processed = { items = {}, recipes = {} }
 
     --- Validar si se cargó antes
     if This_MOD.setting then return end
@@ -139,22 +139,17 @@ function This_MOD.get_elements()
         --- Obtiener la información
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        local Space = {}
-        Space.item_do = GMOD.items[recipe.results[1].name]
-        Space.item_undo = GMOD.items[recipe.ingredients[1].name]
+        local Spaces = This_MOD.to_be_processed
+        local Item_do = GMOD.items[recipe.results[1].name]
+        local Item_undo = GMOD.items[recipe.ingredients[1].name]
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        Spaces.items[Item_undo.name] = Item_do
 
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Guardar la información
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        This_MOD.to_be_processed[recipe.type] = This_MOD.to_be_processed[recipe.type] or {}
-        This_MOD.to_be_processed[recipe.type][Space.item_undo.name] = Space
+        for _, Recipe in pairs(GMOD.recipes[Item_undo]) do
+            if not GMOD.has_id(Recipe.name, d12b.id) then
+                Spaces.recipes[Recipe.name] = Recipe
+            end
+        end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
@@ -176,6 +171,24 @@ function This_MOD.get_elements()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
+function This_MOD.create_recipe(space)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for _, recipe in pairs(GMOD.recipes[""]) do
+
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------
 
 function This_MOD.create_item(space)
