@@ -207,6 +207,11 @@ function This_MOD.create_recipe(space)
         --- Actializar el nombre
         Recipe.name = name
 
+        --- Actializar main_product
+        if Recipe.main_product and space.items[Recipe.main_product] then
+            Recipe.main_product = space.items[Recipe.main_product].name
+        end
+
         --- Actializar los ingredientes y los resultados
         for _, elements in pairs({ Recipe.ingredients, Recipe.results }) do
             for _, element in pairs(elements) do
@@ -263,6 +268,7 @@ function This_MOD.create_recipe(space)
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
