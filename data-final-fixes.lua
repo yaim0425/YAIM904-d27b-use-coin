@@ -34,7 +34,7 @@ function This_MOD.reference_values()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     --- Contenedor de los elementos que el MOD modoficará
-    This_MOD.to_be_processed = { items = {}, recipes = {} }
+    This_MOD.to_be_processed = {}
 
     --- Validar si se cargó antes
     if This_MOD.setting then return end
@@ -83,25 +83,22 @@ function This_MOD.get_elements()
     --- Función para analizar cada entidad
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function validate_recipe(recipe)
+    local function validate_item(item)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Validación
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- Validar el tipo
-        if recipe.type ~= "recipe" then return end
-        if not GMOD.has_id(recipe.name, d12b.id) then return end
-        if not GMOD.has_id(recipe.name, d12b.category_do) then return end
+        --- Validar si ya fue procesado
+        local That_MOD =
+            GMOD.get_id_and_name(item.name) or
+            { id = "-", name = item.name }
 
-        --- Validar contenido
-        if #recipe.ingredients ~= 1 then return end
-        if #recipe.results ~= 1 then return end
+        --- Validar si ya fue procesado
+        local Name =
+            GMOD.name .. That_MOD.ids ..
+            This_MOD.id .. "-" .. That_MOD.name
 
-        --- Enlistar el item
-        local Result = recipe.results[1].name
-        local Ingredient = recipe.ingredients[1].name
-        local Items = This_MOD.to_be_processed.items
-        Items[Ingredient] = GMOD.items[Result]
+        if data.raw.recipe[Name] then return end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -113,26 +110,26 @@ function This_MOD.get_elements()
         --- Guardar la información
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- Renombrar
-        local Recipes = This_MOD.to_be_processed.recipes
+        -- --- Renombrar
+        -- local Recipes = This_MOD.to_be_processed.recipes
 
-        --- Recetas a duplicar
-        for _, Recipe in pairs(GMOD.recipes[Ingredient]) do
-            repeat
-                if GMOD.has_id(Recipe.name, d12b.id) then break end
-                if d12b.setting.stack_size then
-                    if GMOD.get_tables(Recipe.results, "type", "fluid") then break end
-                    if GMOD.get_tables(Recipe.ingredients, "type", "fluid") then break end
-                end
+        -- --- Recetas a duplicar
+        -- for _, Recipe in pairs(GMOD.recipes[Ingredient]) do
+        --     repeat
+        --         if GMOD.has_id(Recipe.name, d12b.id) then break end
+        --         if d12b.setting.stack_size then
+        --             if GMOD.get_tables(Recipe.results, "type", "fluid") then break end
+        --             if GMOD.get_tables(Recipe.ingredients, "type", "fluid") then break end
+        --         end
 
-                local Aux, i = "", 0
-                while data.raw.recipe[Result .. Aux] do
-                    Aux, i = "-" .. i, i + 1
-                end
+        --         local Aux, i = "", 0
+        --         while data.raw.recipe[Result .. Aux] do
+        --             Aux, i = "-" .. i, i + 1
+        --         end
 
-                Recipes[Result .. Aux] = Recipe
-            until true
-        end
+        --         Recipes[Result .. Aux] = Recipe
+        --     until true
+        -- end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
@@ -147,8 +144,8 @@ function This_MOD.get_elements()
     --- Preparar los datos a usar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for _, recipe in pairs(data.raw.recipe) do
-        validate_recipe(recipe)
+    for _, item in pairs(GMOD.items) do
+        validate_item(item)
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
