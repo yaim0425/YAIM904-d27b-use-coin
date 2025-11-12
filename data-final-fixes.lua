@@ -271,6 +271,118 @@ function This_MOD.create_recipe(space)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
+function This_MOD.m()
+    local coin_name = "coin"
+
+    -- Asegura que el objeto "coin" exista
+    data:extend({
+        {
+            type = "item",
+            name = coin_name,
+            icon = "__base__/graphics/icons/coin.png",
+            icon_size = 64,
+            subgroup = "intermediate-product",
+            order = "z[coin]",
+            stack_size = 100000
+        }
+    })
+
+    -- ==========================================
+    -- 🔁 Cálculo recursivo de valores de objetos
+    -- ==========================================
+    local values = {}
+    local cache = {}
+
+    --- Obtener valor de un ítem (recursivo)
+    --- @param name string
+    --- @return number
+    local function get_value(name)
+        -- Valor ya calculado
+        if values[name] then return values[name] end
+        -- Evitar bucles
+        if cache[name] then return 1 end
+        cache[name] = true
+
+        -- Buscar recetas que produzcan este objeto
+        local matching_recipes = {}
+        for _, recipe in pairs(data.raw.recipe) do
+            for _, res in pairs(recipe.results or {}) do
+                if res.name == name then
+                    table.insert(matching_recipes, recipe)
+                    break
+                end
+            end
+        end
+
+        -- Sin receta → valor base 1
+        if #matching_recipes == 0 then
+            cache[name] = nil
+            values[name] = 1
+            return 1
+        end
+
+        -- Calcular valor mínimo entre todas las recetas posibles
+        local min_value = math.huge
+        for _, recipe in pairs(matching_recipes) do
+            local energy = recipe.energy_required or 0.5
+            local ingredients = recipe.ingredients or {}
+            local total = energy
+
+            -- Calcular costo de los ingredientes
+            for _, ing in pairs(ingredients) do
+                local ing_name = ing.name or ing[1]
+                local ing_amount = ing.amount or ing[2] or 1
+                total = total + get_value(ing_name) * ing_amount
+            end
+
+            -- Determinar cantidad de resultados
+            local results = recipe.results
+            local total_results = 0
+            if results then
+                for _, res in pairs(results) do
+                    total_results = total_results + (res.amount or 1)
+                end
+            elseif recipe.result then
+                total_results = recipe.result_count or 1
+            end
+
+            if total_results > 0 then
+                total = total / total_results
+            end
+
+            if total < min_value then
+                min_value = total
+            end
+        end
+
+        cache[name] = nil
+        values[name] = min_value
+        return min_value
+    end
+
+    -- ================================
+    -- 💰 Generar recetas de conversión
+    -- ================================
+    local coin_recipes = {}
+    for _, item in pairs(data.raw.item) do
+        local val = get_value(item.name)
+        table.insert(coin_recipes, {
+            type = "recipe",
+            name = "convert-" .. item.name .. "-to-" .. coin_name,
+            category = "crafting",
+            energy_required = 0.5,
+            enabled = true,
+            ingredients = { { item.name, 1 } },
+            results = { { coin_name, math.max(1, math.floor(val)) } },
+            localised_name = { "", { "recipe-name.convert-to-coin" }, " (", item.localised_name or item.name, ")" }
+        })
+    end
+
+    data:extend(coin_recipes)
+
+    log("💰 Coin conversion recipes generated: " .. tostring(#coin_recipes))
+end
+
 ---------------------------------------------------------------------------------------------------
 
 
