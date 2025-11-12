@@ -7,20 +7,6 @@
 
 
 ---------------------------------------------------------------------------------------------------
----[ Cargar dependencias ]---
----------------------------------------------------------------------------------------------------
-
-local d12b = GMOD.d12b
-local d13b = GMOD.d13b
-if not d12b then return end
-
----------------------------------------------------------------------------------------------------
-
-
-
-
-
----------------------------------------------------------------------------------------------------
 ---[ Información del MOD ]---
 ---------------------------------------------------------------------------------------------------
 
@@ -33,17 +19,11 @@ GMOD[This_MOD.id] = This_MOD
 function This_MOD.start()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    --- Iniciar el MOD dependiente
-    (d13b or d12b).start()
-
     --- Valores de la referencia
     This_MOD.reference_values()
 
-    --- Obtener los elementos
-    This_MOD.get_elements()
-
-    --- Modificar los elementos
-    This_MOD.create_recipe(This_MOD.to_be_processed)
+    -- --- Obtener los elementos
+    -- This_MOD.get_elements()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -71,6 +51,19 @@ function This_MOD.reference_values()
 
     --- Cargar la configuración
     This_MOD.setting = GMOD.setting[This_MOD.id] or {}
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Valores de la referencia en todos los MODs
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Valor para objetos sin recetas
+    This_MOD.value_default = 0
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
