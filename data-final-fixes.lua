@@ -22,8 +22,8 @@ function This_MOD.start()
     --- Valores de la referencia
     This_MOD.reference_values()
 
-    -- --- Obtener los elementos
-    -- This_MOD.get_elements()
+    --- Obtener los elementos
+    This_MOD.get_elements()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -110,26 +110,25 @@ function This_MOD.get_elements()
         --- Guardar la información
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        -- --- Renombrar
-        -- local Recipes = This_MOD.to_be_processed.recipes
+        local Space = {}
 
-        -- --- Recetas a duplicar
-        -- for _, Recipe in pairs(GMOD.recipes[Ingredient]) do
-        --     repeat
-        --         if GMOD.has_id(Recipe.name, d12b.id) then break end
-        --         if d12b.setting.stack_size then
-        --             if GMOD.get_tables(Recipe.results, "type", "fluid") then break end
-        --             if GMOD.get_tables(Recipe.ingredients, "type", "fluid") then break end
-        --         end
+        Space.name = Name
 
-        --         local Aux, i = "", 0
-        --         while data.raw.recipe[Result .. Aux] do
-        --             Aux, i = "-" .. i, i + 1
-        --         end
+        Space.item = item
+        Space.recipe = GMOD.recipes[item.name]
 
-        --         Recipes[Result .. Aux] = Recipe
-        --     until true
-        -- end
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Guardar la información
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        This_MOD.to_be_processed[item.type] = This_MOD.to_be_processed[item.type] or {}
+        This_MOD.to_be_processed[item.type][item.name] = Space
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
