@@ -25,6 +25,20 @@ function This_MOD.start()
     --- Obtener los elementos
     This_MOD.get_elements()
 
+    -- --- Modificar los elementos
+    -- for _, spaces in pairs(This_MOD.to_be_processed) do
+    --     for _, space in pairs(spaces) do
+    --         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --         -- --- Crear los elementos
+    --         This_MOD.create_item(space)
+    --         This_MOD.create_recipe(space)
+    --         This_MOD.create_tech(space)
+
+    --         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --     end
+    -- end
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
@@ -65,6 +79,9 @@ function This_MOD.reference_values()
     --- Valor para objetos sin recetas
     This_MOD.value_default = 0
 
+    --- Nombre de la moneda
+    This_MOD.coin_name = This_MOD.prefix .. "coin"
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
@@ -91,7 +108,7 @@ function This_MOD.get_elements()
         --- Validar si ya fue procesado
         local That_MOD =
             GMOD.get_id_and_name(item.name) or
-            { id = "-", name = item.name }
+            { ids = "-", name = item.name }
 
         --- Validar si ya fue procesado
         local Name =
@@ -151,6 +168,27 @@ function This_MOD.get_elements()
 end
 
 ---------------------------------------------------------------------------------------------------
+
+function This_MOD.create_item(space)
+    local function create_coin()
+        if GMOD.items[This_MOD.coin_name] then return end
+
+        GMOD.extend({
+            type = "item",
+            name = This_MOD.coin_name,
+            localised_name = { "localised_name.coin" },
+            icons = { {
+                icon = "__base__/graphics/icons/coin.png",
+                icon_size = 64
+            } },
+            subgroup = "intermediate-product",
+            order = "z[coin]",
+            stack_size = 100000
+        })
+    end
+
+    create_coin()
+end
 
 function This_MOD.create_recipe(space)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -268,8 +306,10 @@ function This_MOD.m()
         {
             type = "item",
             name = coin_name,
-            icon = "__base__/graphics/icons/coin.png",
-            icon_size = 64,
+            icons = { {
+                icon = "__base__/graphics/icons/coin.png",
+                icon_size = 64
+            } },
             subgroup = "intermediate-product",
             order = "z[coin]",
             stack_size = 100000
