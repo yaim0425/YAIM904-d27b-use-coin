@@ -25,19 +25,19 @@ function This_MOD.start()
     --- Obtener los elementos
     This_MOD.get_elements()
 
-    -- --- Modificar los elementos
-    -- for _, spaces in pairs(This_MOD.to_be_processed) do
-    --     for _, space in pairs(spaces) do
-    --         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Modificar los elementos
+    for _, spaces in pairs(This_MOD.to_be_processed) do
+        for _, space in pairs(spaces) do
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    --         -- --- Crear los elementos
-    --         This_MOD.create_item(space)
-    --         This_MOD.create_recipe(space)
-    --         This_MOD.create_tech(space)
+            -- --- Crear los elementos
+            This_MOD.create_item(space)
+            -- This_MOD.create_recipe(space)
+            -- This_MOD.create_tech(space)
 
-    --         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --     end
-    -- end
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        end
+    end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -176,7 +176,7 @@ function This_MOD.create_item(space)
         GMOD.extend({
             type = "item",
             name = This_MOD.coin_name,
-            localised_name = { "localised_name.coin" },
+            localised_name = { "item-name.coin" },
             icons = { {
                 icon = "__base__/graphics/icons/coin.png",
                 icon_size = 64
