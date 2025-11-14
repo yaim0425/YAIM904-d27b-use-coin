@@ -30,10 +30,10 @@ function This_MOD.start()
         for _, space in pairs(spaces) do
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-            -- --- Crear los elementos
+            --- Crear los elementos
             This_MOD.create_item(space)
-            -- This_MOD.create_recipe(space)
-            -- This_MOD.create_tech(space)
+            This_MOD.create_entity(space)
+            This_MOD.create_recipe(space)
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         end
@@ -69,6 +69,10 @@ function This_MOD.reference_values()
     --- Cargar la configuración
     This_MOD.setting = GMOD.setting[This_MOD.id] or {}
 
+    --- Indicador del mod
+    This_MOD.indicator = { icon = GMOD.signal.star, scale = 0.25, shift = { 0, -5 } }
+    This_MOD.indicator_bg = { icon = GMOD.signal.black, scale = 0.25, shift = { 0, -5 } }
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
@@ -78,6 +82,33 @@ function This_MOD.reference_values()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Valores de la referencia en todos los MODs
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Valores de referencia
+    This_MOD.old_entity_name = "assembling-machine-2"
+    This_MOD.new_entity_name = GMOD.name .. "-A00A-market"
+    This_MOD.new_localised_name = { "", { "entity-name.market" } }
+
+    --- Acciones
+    This_MOD.actions = {
+        sell = { "ingredients", "results" },
+        buy = { "results", "ingredients" }
+    }
+
+    --- Receta base
+    This_MOD.recipe_base = {
+        type = "recipe",
+        name = "",
+        localised_name = {},
+        localised_description = {},
+        energy_required = 1,
+
+        hide_from_player_crafting = true,
+        subgroup = "",
+        order = "",
+
+        ingredients = {},
+        results = {}
+    }
 
     --- Valor para objetos sin recetas
     This_MOD.value_default = 0
@@ -99,24 +130,55 @@ end
 ---------------------------------------------------------------------------------------------------
 
 function This_MOD.get_elements()
-end
-
----------------------------------------------------------------------------------------------------
-
-function This_MOD.create_item(space)
-end
-
-function This_MOD.create_recipe(space)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Actializar la propiedad indicada
+    --- Función para analizar cada entidad
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function update_propiety(element, propiety)
-        if not element[propiety] then return end
-        element[propiety] = d12b.setting.amount * element[propiety]
-        if element[propiety] > 65000 then
-            element[propiety] = 65000
-        end
+    local function validate_entity(item, entity)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validación
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Validar valores de referencia
+        if GMOD.entities[This_MOD.new_entity_name] then return end
+
+        --- Validar la entity
+        if not entity then return end
+
+        --- Validar el item
+        if not item then return end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Valores para el proceso
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Space = {}
+        Space.item = item
+        Space.entity = entity
+
+        Space.recipe = GMOD.recipes[Space.item.name]
+        Space.recipe = Space.recipe and Space.recipe[1] or nil
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Guardar la información
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        This_MOD.to_be_processed[entity.type] = This_MOD.to_be_processed[entity.type] or {}
+        This_MOD.to_be_processed[entity.type][entity.name] = Space
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -126,46 +188,98 @@ function This_MOD.create_recipe(space)
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Duplicar la receta
+    --- Fluidos a afectar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for name, recipe in pairs(space.recipes) do
+    local function get_fluids()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Duplicar la receta
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Recipe = GMOD.copy(recipe)
-
+        --- Variable a usar
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
+        local Output = {}
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
 
 
 
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Cambiar algunas propiedades
+        --- Validar el fluido
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- Actializar el nombre
-        Recipe.name = name
+        local function validate(element)
+            if element.type ~= "fluid" then return end
 
-        --- Actializar main_product
-        if Recipe.main_product and space.items[Recipe.main_product] then
-            Recipe.main_product = space.items[Recipe.main_product].name
+            local Temperatures = Output[element.name] or {}
+            Output[element.name] = Temperatures
+
+            if element.maximum_temperature then
+                Temperatures[element.maximum_temperature] = true
+            elseif element.temperature then
+                Temperatures[element.temperature] = true
+            end
         end
 
-        --- Actializar los ingredientes y los resultados
-        for _, elements in pairs({ Recipe.ingredients, Recipe.results }) do
-            for _, element in pairs(elements) do
-                local Item = space.items[element.name]
-                local Type = element.type
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-                if Type == "fluid" or (Type == "item" and not Item) then
-                    update_propiety(element, "amount")
-                    update_propiety(element, "amount_min")
-                    update_propiety(element, "amount_max")
-                elseif Type == "item" and Item then
-                    element.name = Item.name
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Obtener los fluidos
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Todos los fluidos
+        if This_MOD.setting.all then
+            --- Fluidos creados con recetas
+            for _, recipe in pairs(data.raw.recipe) do
+                for _, elements in pairs({
+                    recipe.ingredients,
+                    recipe.results
+                }) do
+                    for _, element in pairs(elements) do
+                        validate(element)
+                    end
+                end
+            end
+
+            --- Fluidos creados sin recetas
+            for _, entity in pairs(GMOD.entities) do
+                repeat
+                    --- Validación
+                    if not entity.output_fluid_box then break end
+                    if entity.output_fluid_box.pipe_connections == 0 then break end
+                    if not entity.output_fluid_box.filter then break end
+                    if not entity.target_temperature then break end
+
+                    --- Renombrar variable
+                    local Name = entity.output_fluid_box.filter
+
+                    --- Guardar la temperatura
+                    local Temperatures = Output[Name] or {}
+                    Output[Name] = Temperatures
+                    Temperatures[entity.target_temperature] = true
+                until true
+            end
+        end
+
+        --- Solo los fluidos en la naturaleza
+        if not This_MOD.setting.all then
+            --- Fluidos tomados del suelo
+            for _, tile in pairs(data.raw.tile) do
+                if tile.fluid then
+                    Output[tile.fluid] = {}
+                end
+            end
+
+            --- Fluidos minables
+            for _, resource in pairs(data.raw.resource) do
+                local results = resource.minable
+                results = results and results.results or {}
+                for _, result in pairs(results) do
+                    validate(result)
                 end
             end
         end
@@ -177,24 +291,14 @@ function This_MOD.create_recipe(space)
 
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Actializar el subgroup
+        --- Dar el formato deseado
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        repeat
-            --- Validación
-            if not Recipe.subgroup then break end
-            if not Recipe.results then break end
-            if #Recipe.results == 0 then break end
-            if Recipe.results[1].type ~= "item" then break end
-            local Item = GMOD.items[Recipe.results[1].name]
-            if not Item then break end
-
-            --- Igualar subgrupo
-            Recipe.subgroup = Item.subgroup
-
-            --- Igualar la imagen
-            Recipe.icons = Item.icons
-        until true
+        for fluid_name, temperatures in pairs(Output) do
+            if not GMOD.get_length(temperatures) then
+                Output[fluid_name] = false
+            end
+        end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -203,13 +307,238 @@ function This_MOD.create_recipe(space)
 
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Crear el prototipo
+        --- Devolver el resultado
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        GMOD.extend(Recipe)
+        return Output
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Valores a afectar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Entidad que se va a duplicar
+    validate_entity(
+        GMOD.items[This_MOD.old_entity_name],
+        GMOD.entities[This_MOD.old_entity_name]
+    )
+
+    --- Fluidos a afectar
+    This_MOD.fluids = get_fluids()
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+---------------------------------------------------------------------------------------------------
+
+function This_MOD.create_item(space)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if not space.item then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Duplicar el elemento
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Item = GMOD.copy(space.item)
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Cambiar algunas propiedades
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Nombre
+    Item.name = This_MOD.new_entity_name
+
+    --- Apodo
+    Item.localised_name = This_MOD.new_localised_name
+
+    --- Actualizar el order
+    local Order = tonumber(Item.order) + 1
+    Item.order = GMOD.pad_left_zeros(#Item.order, Order)
+
+    --- Agregar indicador del MOD
+    table.insert(Item.icons, This_MOD.indicator_bg)
+    table.insert(Item.icons, This_MOD.indicator)
+
+    --- Entidad a crear
+    Item.place_result = This_MOD.new_entity_name
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    ---- Crear el prototipo
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    GMOD.extend(Item)
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+function This_MOD.create_entity(space)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if not space.entity then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Duplicar el elemento
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Entity = GMOD.copy(space.entity)
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Cambiar algunas propiedades
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Nombre
+    Entity.name = This_MOD.new_entity_name
+
+    --- Apodo
+    Entity.localised_name = This_MOD.new_localised_name
+
+    --- Objeto a minar
+    Entity.minable.results = { {
+        type = "item",
+        name = This_MOD.new_entity_name,
+        amount = 1
+    } }
+
+    --- Elimnar propiedades inecesarias
+    Entity.fast_replaceable_group = nil
+    Entity.next_upgrade = nil
+
+    --- No usa energía
+    Entity.energy_source = { type = "void" }
+
+    --- Categoria de fabricación
+    Entity.crafting_categories = {}
+
+    --- Agregar indicador del MOD
+    Entity.icons = GMOD.copy(space.item.icons)
+    table.insert(Entity.icons, This_MOD.indicator_bg)
+    table.insert(Entity.icons, This_MOD.indicator)
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear el prototipo
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    GMOD.extend(Entity)
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+function This_MOD.create_recipe(space)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if not space.recipe then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Duplicar el elemento
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Recipe = GMOD.copy(space.recipe)
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Cambiar algunas propiedades
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Nombre
+    Recipe.name = This_MOD.new_entity_name
+
+    --- Apodo y descripción
+    Recipe.localised_name = This_MOD.new_localised_name
+
+    --- Elimnar propiedades inecesarias
+    Recipe.main_product = nil
+
+    --- Receta desbloqueada por tecnología
+    Recipe.enabled = true
+
+    --- Agregar indicador del MOD
+    Recipe.icons = GMOD.copy(space.item.icons)
+    table.insert(Recipe.icons, This_MOD.indicator_bg)
+    table.insert(Recipe.icons, This_MOD.indicator)
+
+    --- Ingredientes
+    Recipe.ingredients = {}
+
+    --- Resultados
+    Recipe.results = { {
+        type = "item",
+        name = This_MOD.new_entity_name,
+        amount = 1
+    } }
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    ---- Crear el prototipo
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    GMOD.extend(Recipe)
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
