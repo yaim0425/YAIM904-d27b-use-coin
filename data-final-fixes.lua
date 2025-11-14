@@ -666,10 +666,22 @@ end
 
 function This_MOD.create_recipe___coin()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Función para analizar cada entidad
+    --- Variables a usar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function validate_item(item)
+    local Cache, Values = {}, {}
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Función para analizar cada item
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function get_items(item)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Validación
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -724,13 +736,129 @@ function This_MOD.create_recipe___coin()
 
 
 
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Función para analizar cada item
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function get_fluids(fluid)
+
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Obtener valor de un ítem (recursivo)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function get_value(name)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Valor ya calculado
+        if Values[name] then
+            return Values[name]
+        end
+
+        --- Evitar bucles
+        if Cache[name] then return 0 end
+        Cache[name] = true
+
+        --- Item sin receta
+        if not GMOD.recipes[name] then
+            Values[name] = 0
+            return 0
+        end
+
+        --- Contenedor temporal
+        Values[name] = {}
+
+        --- Valor total de la receta
+        local Value = 0
+        for _, recipe in pairs(GMOD.recipes[name]) do
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+            --- Calcular los ingredients
+            for _, ingredient in pairs(recipe.ingredients or {}) do
+                Value = Value + ingredient.amount * get_value(ingredient.name)
+            end
+
+            --- Agregar el tiempo
+            Value = Value + (recipe.energy_required or 0.5)
+
+            --- Calcular el valor del objeto
+            for _, result in pairs(recipe.results) do
+                local amount = result.amount_max or result.amount
+                table.insert(Values[name], Value / amount)
+            end
+
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        end
+
+        --- Asignar el menor valor
+        table.sort(Values[name])
+        Values[name] = Values[name][1]
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear la receta para cada item dado
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function create_recipe(space)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        -- Values[space.item.name] = {}
+        -- for _, recipe in pairs(space.recipe) do
+
+        -- end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Preparar los datos a usar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     This_MOD.to_be_processed = {}
+
     for _, item in pairs(GMOD.items) do
-        validate_item(item)
+        get_items(item)
+    end
+
+    for _, fluid in pairs(GMOD.fluids) do
+        get_fluids(fluid)
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear las recetas
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for _, spaces in pairs(This_MOD.to_be_processed) do
+        for _, space in pairs(spaces) do
+            create_recipe(space)
+        end
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
