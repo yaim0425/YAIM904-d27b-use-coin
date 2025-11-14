@@ -39,6 +39,9 @@ function This_MOD.start()
         end
     end
 
+    --- Crear la monada
+    This_MOD.create_coin()
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
@@ -170,24 +173,6 @@ end
 ---------------------------------------------------------------------------------------------------
 
 function This_MOD.create_item(space)
-    local function create_coin()
-        if GMOD.items[This_MOD.coin_name] then return end
-
-        GMOD.extend({
-            type = "item",
-            name = This_MOD.coin_name,
-            localised_name = { "item-name.coin" },
-            icons = { {
-                icon = "__base__/graphics/icons/coin.png",
-                icon_size = 64
-            } },
-            subgroup = "intermediate-product",
-            order = "z[coin]",
-            stack_size = 100000
-        })
-    end
-
-    create_coin()
 end
 
 function This_MOD.create_recipe(space)
@@ -297,6 +282,8 @@ function This_MOD.create_recipe(space)
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
+
+---------------------------------------------------------------------------------------------------
 
 function This_MOD.m()
     local coin_name = "coin"
@@ -410,6 +397,41 @@ function This_MOD.m()
     data:extend(coin_recipes)
 
     log("💰 Coin conversion recipes generated: " .. tostring(#coin_recipes))
+end
+
+---------------------------------------------------------------------------------------------------
+
+function This_MOD.create_coin()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if GMOD.items[This_MOD.coin_name] then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear el item
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    GMOD.extend({
+        type = "item",
+        name = This_MOD.coin_name,
+        localised_name = { "item-name.coin" },
+        icons = { {
+            icon = "__base__/graphics/icons/coin.png",
+            icon_size = 64
+        } },
+        subgroup = "intermediate-product",
+        order = "z[coin]",
+        stack_size = 100000
+    })
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
 ---------------------------------------------------------------------------------------------------
