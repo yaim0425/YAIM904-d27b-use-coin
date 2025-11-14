@@ -39,6 +39,9 @@ function This_MOD.start()
         end
     end
 
+    --- Recetas de conversión
+    This_MOD.create_recipe___coin()
+
     --- Crear la monada
     This_MOD.create_item___coin()
 
@@ -661,39 +664,6 @@ end
 
 ---------------------------------------------------------------------------------------------------
 
-function This_MOD.create_item___coin()
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    if GMOD.items[This_MOD.coin_name] then return end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Crear el item
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    GMOD.extend({
-        type = "item",
-        name = This_MOD.coin_name,
-        localised_name = { "item-name.coin" },
-        icons = { {
-            icon = "__base__/graphics/icons/coin.png",
-            icon_size = 64
-        } },
-        subgroup = "intermediate-product",
-        order = "z[coin]",
-        stack_size = 100000
-    })
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-end
-
 function This_MOD.create_recipe___coin()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Función para analizar cada entidad
@@ -709,7 +679,6 @@ function This_MOD.create_recipe___coin()
             GMOD.get_id_and_name(item.name) or
             { ids = "-", name = item.name }
 
-        --- Validar si ya fue procesado
         local Name =
             GMOD.name .. That_MOD.ids ..
             This_MOD.id .. "-" .. That_MOD.name
@@ -763,6 +732,39 @@ function This_MOD.create_recipe___coin()
     for _, item in pairs(GMOD.items) do
         validate_item(item)
     end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+function This_MOD.create_item___coin()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if GMOD.items[This_MOD.coin_name] then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear el item
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    GMOD.extend({
+        type = "item",
+        name = This_MOD.coin_name,
+        localised_name = { "item-name.coin" },
+        icons = { {
+            icon = "__base__/graphics/icons/coin.png",
+            icon_size = 64
+        } },
+        subgroup = "intermediate-product",
+        order = "z[coin]",
+        stack_size = 100000
+    })
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
