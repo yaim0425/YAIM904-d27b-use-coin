@@ -749,7 +749,7 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         --- Evitar bucles
-        if Cache[name] then return 0 end
+        if Cache[name] then return This_MOD.value_default end
         Cache[name] = true
 
         --- Valor ya calculado
@@ -757,9 +757,9 @@ function This_MOD.create_recipe___coin()
 
         --- Item sin receta
         if not GMOD.recipes[name] then
-            Values[name] = 0
             Cache[name] = nil
-            return 0
+            Values[name] = This_MOD.value_default
+            return Values[name]
         end
 
         --- Contenedor temporal
