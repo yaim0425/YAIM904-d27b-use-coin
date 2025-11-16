@@ -119,6 +119,9 @@ function This_MOD.reference_values()
     --- Nombre de la moneda
     This_MOD.coin_name = This_MOD.prefix .. "coin"
 
+    --- Valor minimo
+    This_MOD.digits = 1000
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
@@ -678,18 +681,18 @@ function This_MOD.create_recipe___coin()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Función para analizar cada item
+    --- Función para analizar cada element
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function get_items(item)
+    local function get_elements(element)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Validación
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         --- Validar si ya fue procesado
         local That_MOD =
-            GMOD.get_id_and_name(item.name) or
-            { ids = "-", name = item.name }
+            GMOD.get_id_and_name(element.name) or
+            { ids = "-", name = element.name }
 
         local Name =
             GMOD.name .. That_MOD.ids ..
@@ -711,8 +714,7 @@ function This_MOD.create_recipe___coin()
 
         Space.name = Name
 
-        Space.item = item
-        Space.recipe = GMOD.recipes[item.name]
+        Space.element = element
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -724,24 +726,10 @@ function This_MOD.create_recipe___coin()
         --- Guardar la información
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        This_MOD.to_be_processed[item.type] = This_MOD.to_be_processed[item.type] or {}
-        This_MOD.to_be_processed[item.type][item.name] = Space
+        This_MOD.to_be_processed[element.type] = This_MOD.to_be_processed[element.type] or {}
+        This_MOD.to_be_processed[element.type][element.name] = Space
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Función para analizar cada item
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local function get_fluids(fluid)
-
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -757,18 +745,17 @@ function This_MOD.create_recipe___coin()
     local function get_value(name)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- Valor ya calculado
-        if Values[name] then
-            return Values[name]
-        end
-
         --- Evitar bucles
         if Cache[name] then return 0 end
         Cache[name] = true
 
+        --- Valor ya calculado
+        if Values[name] then return Values[name] end
+
         --- Item sin receta
         if not GMOD.recipes[name] then
             Values[name] = 0
+            Cache[name] = nil
             return 0
         end
 
@@ -789,9 +776,14 @@ function This_MOD.create_recipe___coin()
             Value = Value + (recipe.energy_required or 0.5)
 
             --- Calcular el valor del objeto
-            for _, result in pairs(recipe.results) do
+            for _, result in pairs(recipe.results or {}) do
                 local amount = result.amount_max or result.amount
-                table.insert(Values[name], Value / amount)
+
+                local Coin = Value / amount
+                Coin = Coin * This_MOD.digits
+                Coin = math.floor(Coin) / This_MOD.digits
+
+                table.insert(Values[name], Coin)
             end
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -800,6 +792,8 @@ function This_MOD.create_recipe___coin()
         --- Asignar el menor valor
         table.sort(Values[name])
         Values[name] = Values[name][1]
+        Cache[name] = nil
+        return Values[name]
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
@@ -837,12 +831,10 @@ function This_MOD.create_recipe___coin()
 
     This_MOD.to_be_processed = {}
 
-    for _, item in pairs(GMOD.items) do
-        get_items(item)
-    end
-
-    for _, fluid in pairs(GMOD.fluids) do
-        get_fluids(fluid)
+    for _, elements in pairs({ GMOD.items, GMOD.fluids }) do
+        for _, element in pairs(elements) do
+            get_elements(element)
+        end
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -857,7 +849,13 @@ function This_MOD.create_recipe___coin()
 
     for _, spaces in pairs(This_MOD.to_be_processed) do
         for _, space in pairs(spaces) do
-            create_recipe(space)
+            get_value(space.element.name)
+        end
+    end
+
+    for name, value in pairs(Values) do
+        if value ~= 0 then
+            create_recipe(name)
         end
     end
 
