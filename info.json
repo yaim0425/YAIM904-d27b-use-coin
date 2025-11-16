@@ -1,13 +1,14 @@
 {
-  "name": "YAIM0425-d27b-recipes-to-compacted-items",
+  "name": "YAIM0425-d27b-use-coin",
   "version": "0.0.1",
-  "title": "YAIM0425 d27b Recipes to compacted items",
+  "title": "YAIM0425 d27b Use coin",
   "author": "YAIM0425",
   "factorio_version": "2.0",
-  "description": "Create recipes to compacted items. [[I accept suggestions]]",
-  "homepage": "https://github.com/yaim0425/YAIM0425-d27b-recipes-to-compacted-items",
+  "description": "Create and use coins to craft the items you want. [[I accept suggestions]]",
+  "homepage": "https://github.com/yaim0425/YAIM0425-d27b-use-coin",
   "dependencies": [
     "YAIM0425-d00b-core",
-    "YAIM0425-d12b-compactors"
+    "? YAIM0425-d12b-compactors",
+    "? YAIM0425-d13b-compacted-update"
   ]
 }
