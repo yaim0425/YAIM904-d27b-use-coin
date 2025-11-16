@@ -102,10 +102,11 @@ function This_MOD.reference_values()
         type = "recipe",
         name = "",
         localised_name = {},
-        localised_description = {},
+        localised_description = { "" },
         energy_required = 1,
 
         hide_from_player_crafting = true,
+        hidden_in_factoriopedia = true,
         subgroup = "",
         order = "",
 
@@ -696,7 +697,9 @@ function This_MOD.create_recipe___coin()
 
         local Name =
             GMOD.name .. That_MOD.ids ..
-            This_MOD.id .. "-" .. That_MOD.name
+            This_MOD.id .. "-" ..
+            "sell-" ..
+            That_MOD.name
 
         if data.raw.recipe[Name] then return end
 
@@ -713,8 +716,8 @@ function This_MOD.create_recipe___coin()
         local Space = {}
 
         Space.name = Name
-
         Space.element = element
+        Space.type = element.type == "fluid" and "fluid" or "item"
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -810,11 +813,56 @@ function This_MOD.create_recipe___coin()
 
     local function create_recipe(space)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validación
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        -- Values[space.item.name] = {}
-        -- for _, recipe in pairs(space.recipe) do
+        if space.value == 0 then return end
 
-        -- end
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Crear la recipes
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for action, value in pairs(This_MOD.actions) do
+            local Recipe = GMOD.copy(This_MOD.recipe_base)
+
+            local That_MOD =
+                GMOD.get_id_and_name(space.element.name) or
+                { ids = "-", name = space.element.name }
+
+            local Name =
+                GMOD.name .. That_MOD.ids ..
+                This_MOD.id .. "-" ..
+                action .. "-" ..
+                That_MOD.name
+
+            Recipe.name = Name
+            Recipe.localised_name = space.element.localised_name
+            Recipe.localised_name = { "" }
+            Recipe.energy_required = 0.002
+            Recipe.subgroup = space.element.subgroup
+            Recipe.order = space.element.order
+            Recipe.category = This_MOD.prefix .. action
+
+            Recipe[value[1]] = { {
+                type = space.type,
+                amount = 1,
+                name = space.element.name
+            } }
+
+            Recipe[value[2]] = { {
+                type = "item",
+                amount = space.value,
+                name = This_MOD.coin_name
+            } }
+
+            GMOD.extend(Recipe)
+        end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
@@ -850,13 +898,30 @@ function This_MOD.create_recipe___coin()
     for _, spaces in pairs(This_MOD.to_be_processed) do
         for _, space in pairs(spaces) do
             get_value(space.element.name)
+            space.value = math.floor(Values[space.element.name])
+            if space.value == 0 then
+                space.value = math.ceil(Values[space.element.name])
+            end
+            create_recipe(space)
         end
     end
 
-    for name, value in pairs(Values) do
-        if value ~= 0 then
-            create_recipe(name)
-        end
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear categoria y agrega a la maquita
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Category = GMOD.entities[This_MOD.new_entity_name].crafting_categories
+    for action, _ in pairs(This_MOD.actions) do
+        local Name = This_MOD.prefix .. action
+        if GMOD.get_key(Category, Name) then break end
+        GMOD.extend({ type = "recipe-category", name = Name })
+        table.insert(Category, Name)
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -889,7 +954,7 @@ function This_MOD.create_item___coin()
         } },
         subgroup = "intermediate-product",
         order = "z[coin]",
-        stack_size = 100000
+        stack_size = 100
     })
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
