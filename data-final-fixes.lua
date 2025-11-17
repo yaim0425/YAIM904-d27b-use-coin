@@ -673,7 +673,7 @@ function This_MOD.create_recipe___coin()
     --- Variables a usar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local Cache, Values = {}, {}
+    local Cache, Values, Recipes = {}, {}, {}
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -787,8 +787,8 @@ function This_MOD.create_recipe___coin()
                 local Coin = Value / amount
                 Coin = Coin * This_MOD.digits
                 Coin = math.floor(Coin) / This_MOD.digits
-
-                table.insert(Values[name], Coin)
+                if Coin > 65000 then Coin = 65000 end
+                if Coin > 0 then table.insert(Values[name], Coin) end
             end
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -796,7 +796,7 @@ function This_MOD.create_recipe___coin()
 
         --- Asignar el menor valor
         table.sort(Values[name])
-        Values[name] = Values[name][1]
+        Values[name] = Values[name][#Values[name]] or 0
         Cache[name] = nil
         return Values[name]
 
@@ -905,10 +905,10 @@ function This_MOD.create_recipe___coin()
 
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-            --- Crear el prototipo
+            --- Guardar el prototipo
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-            GMOD.extend(Recipe)
+            table.insert(Recipes, Recipe)
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         end
@@ -955,6 +955,10 @@ function This_MOD.create_recipe___coin()
         end
     end
 
+    for _, Recipe in pairs(Recipes) do
+        GMOD.extend(Recipe)
+    end
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
@@ -972,7 +976,7 @@ function This_MOD.create_recipe___coin()
         GMOD.extend({ type = "recipe-category", name = Name })
         table.insert(Category, Name)
     end
-    -- GMOD.var_dump(Values)
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
