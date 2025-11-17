@@ -771,8 +771,10 @@ function This_MOD.create_recipe___coin()
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
             --- Calcular los ingredients
-            for _, ingredient in pairs(recipe.ingredients or {}) do
-                Value = Value + ingredient.amount * get_value(ingredient.name)
+            if recipe.ingredients and #recipe.ingredients > 0 then
+                for _, ingredient in pairs(recipe.ingredients) do
+                    Value = Value + ingredient.amount * get_value(ingredient.name)
+                end
             end
 
             --- Agregar el tiempo
@@ -842,12 +844,15 @@ function This_MOD.create_recipe___coin()
                 That_MOD.name
 
             Recipe.name = Name
-            Recipe.localised_name = space.element.localised_name
-            Recipe.localised_name = { "" }
             Recipe.energy_required = 0.002
-            Recipe.subgroup = space.element.subgroup
             Recipe.order = space.element.order
             Recipe.category = This_MOD.prefix .. action
+            Recipe.localised_name = space.element.localised_name
+
+            Recipe.subgroup =
+                This_MOD.prefix ..
+                space.element.subgroup .. "-" ..
+                action
 
             Recipe[value[1]] = { {
                 type = space.type,
@@ -861,7 +866,51 @@ function This_MOD.create_recipe___coin()
                 name = This_MOD.coin_name
             } }
 
+            Recipe.icons = GMOD.copy(space.element.icons)
+            if value == This_MOD.actions.sell then
+                table.insert(Recipe.icons, {
+                    icon = "__base__/graphics/icons/coin.png",
+                    scale = GMOD.has_id(space.element.name, "d01b") and 0.35 or 0.25,
+                    icon_size = 64,
+                    shift = { 8, 8 }
+                })
+            end
+
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+            --- Crear el subgrupo para el objeto
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+            --- Duplicar el subgrupo
+            if not GMOD.subgroups[Recipe.subgroup] then
+                GMOD.duplicate_subgroup(space.element.subgroup, Recipe.subgroup)
+
+                --- Renombrar
+                local Subgroup = GMOD.subgroups[Recipe.subgroup]
+                local Order = GMOD.subgroups[space.element.subgroup].order
+                local Index = value == This_MOD.actions.buy and 6 or 7
+
+                --- Actualizar el order
+                Subgroup.order = Index .. Order:sub(2)
+            end
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+            --- Crear el prototipo
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
             GMOD.extend(Recipe)
+
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -923,7 +972,7 @@ function This_MOD.create_recipe___coin()
         GMOD.extend({ type = "recipe-category", name = Name })
         table.insert(Category, Name)
     end
-
+    -- GMOD.var_dump(Values)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
