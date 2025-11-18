@@ -121,7 +121,7 @@ function This_MOD.reference_values()
     This_MOD.coin_name = This_MOD.prefix .. "coin"
 
     --- Valor minimo
-    This_MOD.digits = 1000
+    This_MOD.digits = 10 ^ 3
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -552,128 +552,12 @@ end
 
 ---------------------------------------------------------------------------------------------------
 
-function This_MOD.m()
-    local coin_name = "coin"
-
-    -- Asegura que el objeto "coin" exista
-    data:extend({
-        {
-            type = "item",
-            name = coin_name,
-            icons = { {
-                icon = "__base__/graphics/icons/coin.png",
-                icon_size = 64
-            } },
-            subgroup = "intermediate-product",
-            order = "z[coin]",
-            stack_size = 100000
-        }
-    })
-
-    -- ==========================================
-    -- 🔁 Cálculo recursivo de valores de objetos
-    -- ==========================================
-    local values = {}
-    local cache = {}
-
-    --- Obtener valor de un ítem (recursivo)
-    --- @param name string
-    --- @return number
-    local function get_value(name)
-        -- Valor ya calculado
-        if values[name] then return values[name] end
-        -- Evitar bucles
-        if cache[name] then return 1 end
-        cache[name] = true
-
-        -- Buscar recetas que produzcan este objeto
-        local matching_recipes = {}
-        for _, recipe in pairs(data.raw.recipe) do
-            for _, res in pairs(recipe.results or {}) do
-                if res.name == name then
-                    table.insert(matching_recipes, recipe)
-                    break
-                end
-            end
-        end
-
-        -- Sin receta → valor base 1
-        if #matching_recipes == 0 then
-            cache[name] = nil
-            values[name] = 1
-            return 1
-        end
-
-        -- Calcular valor mínimo entre todas las recetas posibles
-        local min_value = math.huge
-        for _, recipe in pairs(matching_recipes) do
-            local energy = recipe.energy_required or 0.5
-            local ingredients = recipe.ingredients or {}
-            local total = energy
-
-            -- Calcular costo de los ingredientes
-            for _, ing in pairs(ingredients) do
-                local ing_name = ing.name or ing[1]
-                local ing_amount = ing.amount or ing[2] or 1
-                total = total + get_value(ing_name) * ing_amount
-            end
-
-            -- Determinar cantidad de resultados
-            local results = recipe.results
-            local total_results = 0
-            if results then
-                for _, res in pairs(results) do
-                    total_results = total_results + (res.amount or 1)
-                end
-            elseif recipe.result then
-                total_results = recipe.result_count or 1
-            end
-
-            if total_results > 0 then
-                total = total / total_results
-            end
-
-            if total < min_value then
-                min_value = total
-            end
-        end
-
-        cache[name] = nil
-        values[name] = min_value
-        return min_value
-    end
-
-    -- ================================
-    -- 💰 Generar recetas de conversión
-    -- ================================
-    local coin_recipes = {}
-    for _, item in pairs(data.raw.item) do
-        local val = get_value(item.name)
-        table.insert(coin_recipes, {
-            type = "recipe",
-            name = "convert-" .. item.name .. "-to-" .. coin_name,
-            category = "crafting",
-            energy_required = 0.5,
-            enabled = true,
-            ingredients = { { item.name, 1 } },
-            results = { { coin_name, math.max(1, math.floor(val)) } },
-            localised_name = { "", { "recipe-name.convert-to-coin" }, " (", item.localised_name or item.name, ")" }
-        })
-    end
-
-    data:extend(coin_recipes)
-
-    log("💰 Coin conversion recipes generated: " .. tostring(#coin_recipes))
-end
-
----------------------------------------------------------------------------------------------------
-
 function This_MOD.create_recipe___coin()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Variables a usar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local Cache, Values, Recipes = {}, {}, {}
+    local Values, Cache = {}, {}
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -749,11 +633,17 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         --- Evitar bucles
-        if Cache[name] then return This_MOD.value_default end
+        if Cache[name] then
+            Values[name] = 1
+            return 1
+        end
         Cache[name] = true
 
         --- Valor ya calculado
-        if Values[name] then return Values[name] end
+        if Values[name] then
+            Cache[name] = nil
+            return Values[name]
+        end
 
         --- Item sin receta
         if not GMOD.recipes[name] then
@@ -761,9 +651,6 @@ function This_MOD.create_recipe___coin()
             Values[name] = This_MOD.value_default
             return Values[name]
         end
-
-        --- Contenedor temporal
-        Values[name] = {}
 
         --- Valor total de la receta
         local Value = 0
@@ -788,15 +675,17 @@ function This_MOD.create_recipe___coin()
                 Coin = Coin * This_MOD.digits
                 Coin = math.floor(Coin) / This_MOD.digits
                 if Coin > 65000 then Coin = 65000 end
-                if Coin > 0 then table.insert(Values[name], Coin) end
+
+                Values[name] = Values[name] or 0
+                if Coin > 0 and Values[name] < Coin then
+                    Values[name] = Coin
+                end
             end
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         end
 
         --- Asignar el menor valor
-        table.sort(Values[name])
-        Values[name] = Values[name][#Values[name]] or 0
         Cache[name] = nil
         return Values[name]
 
@@ -848,6 +737,17 @@ function This_MOD.create_recipe___coin()
             Recipe.order = space.element.order
             Recipe.category = This_MOD.prefix .. action
             Recipe.localised_name = space.element.localised_name
+            Recipe.icons = GMOD.copy(space.element.icons)
+
+            if value == This_MOD.actions.sell then
+                Recipe.localised_name = { "item-name.coin" }
+                table.insert(Recipe.icons, {
+                    icon = "__base__/graphics/icons/coin.png",
+                    scale = GMOD.has_id(space.element.name, "d01b") and 0.35 or 0.25,
+                    icon_size = 64,
+                    shift = { 8, 8 }
+                })
+            end
 
             Recipe.subgroup =
                 This_MOD.prefix ..
@@ -857,24 +757,16 @@ function This_MOD.create_recipe___coin()
             Recipe[value[1]] = { {
                 type = space.type,
                 amount = 1,
-                name = space.element.name
+                name = space.element.name,
+                ignored_by_stats = space.value
             } }
 
             Recipe[value[2]] = { {
                 type = "item",
                 amount = space.value,
-                name = This_MOD.coin_name
+                name = This_MOD.coin_name,
+                ignored_by_stats = space.value
             } }
-
-            Recipe.icons = GMOD.copy(space.element.icons)
-            if value == This_MOD.actions.sell then
-                table.insert(Recipe.icons, {
-                    icon = "__base__/graphics/icons/coin.png",
-                    scale = GMOD.has_id(space.element.name, "d01b") and 0.35 or 0.25,
-                    icon_size = 64,
-                    shift = { 8, 8 }
-                })
-            end
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -905,10 +797,10 @@ function This_MOD.create_recipe___coin()
 
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-            --- Guardar el prototipo
+            --- Crear el prototipo
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-            table.insert(Recipes, Recipe)
+            GMOD.extend(Recipe)
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         end
@@ -944,19 +836,32 @@ function This_MOD.create_recipe___coin()
     --- Crear las recetas
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for _, spaces in pairs(This_MOD.to_be_processed) do
-        for _, space in pairs(spaces) do
-            get_value(space.element.name)
-            space.value = math.floor(Values[space.element.name])
-            if space.value == 0 then
-                space.value = math.ceil(Values[space.element.name])
+    for _ = 1, 5, 1 do
+        for _, spaces in pairs(This_MOD.to_be_processed) do
+            for _, space in pairs(spaces) do
+                Flag = GMOD.get_key({
+                    "speed-module",
+                    "efficiency-module",
+                    "productivity-module"
+                }, space.element.name) -- and false
+
+                get_value(space.element.name)
+
+                space.value = math.floor(Values[space.element.name])
+                if space.value == 0 then
+                    space.value = math.ceil(Values[space.element.name])
+                end
             end
-            create_recipe(space)
         end
     end
 
-    for _, Recipe in pairs(Recipes) do
-        GMOD.extend(Recipe)
+    GMOD.var_dump(Values)
+    if true then return end
+
+    for _, spaces in pairs(This_MOD.to_be_processed) do
+        for _, space in pairs(spaces) do
+            create_recipe(space)
+        end
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1026,3 +931,40 @@ end
 This_MOD.start()
 
 ---------------------------------------------------------------------------------------------------
+ERROR()
+
+
+--- speed-module
+---     15 time
+---     5 electronic-circuit
+---     5 advanced-circuit
+
+--- electronic-circuit
+---     0.5 time
+---     3 copper-cable
+---     1 iron-plate
+
+--- copper-cable
+---     0.5 time
+---     1 copper-plate
+
+--- copper-plate
+---     3.2 time
+---     1 copper-ore
+
+--- iron-plate
+---     3.2 time
+---     1 iron-ore
+
+--- advanced-circuit
+---     4 copper-cable
+---     2 electronic-circuit
+---     2 plastic-bar
+
+--- plastic-bar
+---     1 time
+---     1 coal
+---     20 petroleum-gas
+
+--- petroleum-gas
+--      ??
