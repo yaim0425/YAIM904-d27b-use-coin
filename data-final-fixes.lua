@@ -706,13 +706,13 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    local function split_value(Value)
+    local function coins(value)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Variables a u
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         local Returm = {}
-        local N = #Value
+        local N = #value
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -726,7 +726,16 @@ function This_MOD.create_recipe___coin()
 
         while N > 0 do
             local start_pos = math.max(1, N - 2)
-            table.insert(Returm, Value:sub(start_pos, N))
+            local Value = tonumber(value:sub(start_pos, N))
+            if Value > 0 then
+                local Char = This_MOD.Units[#Returm + 1]
+                table.insert(Returm, {
+                    type = "item",
+                    amount = Value,
+                    name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
+                    ignored_by_stats = Value
+                })
+            end
             N = N - 3
         end
 
@@ -753,11 +762,11 @@ function This_MOD.create_recipe___coin()
             if space.value == 0 then
                 space.value = math.ceil(Value)
             end
-            space.value_parts = split_value(tostring(space.value))
+            space.coins = coins(tostring(space.value))
 
             if This_MOD.value_maximo.value < space.value then
                 This_MOD.value_maximo.value = space.value
-                This_MOD.value_maximo.value_parts = space.value_parts
+                This_MOD.value_maximo.coins = space.coins
             end
 
             if space.value > 65000 then
@@ -766,15 +775,6 @@ function This_MOD.create_recipe___coin()
         end
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    GMOD.var_dump(This_MOD.value_maximo, Values)
-    -- if true then return end
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
@@ -845,12 +845,7 @@ function This_MOD.create_recipe___coin()
                 ignored_by_stats = 1
             } }
 
-            Recipe[value[2]] = { {
-                type = "item",
-                amount = space.value,
-                name = This_MOD.coin_name,
-                ignored_by_stats = space.value
-            } }
+            Recipe[value[2]] = space.coins
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -993,7 +988,7 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    for N = 2, #This_MOD.value_maximo.value_parts, 1 do
+    for N = 2, #This_MOD.value_maximo.coins, 1 do
         for action, value in pairs(This_MOD.actions) do
             recipes_to_coins({
                 value = value,
@@ -1042,7 +1037,7 @@ function This_MOD.create_item___coin()
     --- Crear el item
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for N, _ in pairs(This_MOD.value_maximo.value_parts) do
+    for N, _ in pairs(This_MOD.value_maximo.coins) do
         local Char = This_MOD.Units[N]
 
         GMOD.extend({
@@ -1083,70 +1078,3 @@ end
 This_MOD.start()
 
 ---------------------------------------------------------------------------------------------------
--- ERROR()
-
---- --- --- --- --- --- --- ---
-
---- speed-module
----     15 time
----     5 electronic-circuit
----     5 advanced-circuit
-
---- --- --- --- --- --- --- ---
-
---- electronic-circuit
----     0.5 time
----     3 copper-cable
----     1 iron-plate
-
---- 2 copper-cable
----     0.5 time
----     1 copper-plate
-
---- copper-plate
----     3.2 time
----     1 copper-ore
-
---- iron-plate
----     3.2 time
----     1 iron-ore
-
---- 1000 iron-ore
----     0.02 time
----     1 YAIM0425-d12b-iron-ore
-
---- YAIM0425-d12b-iron-ore
----     0.02 time
----     1000 iron-ore
-
---- --- --- --- --- --- --- ---
-
---- advanced-circuit
----     4 copper-cable
----     2 electronic-circuit
----     2 plastic-bar
-
---- plastic-bar
----     1 time
----     1 coal
----     20 petroleum-gas
-
---- petroleum-gas
---      ??
-
---[[
-
-function split_every_three(str)
-    local result = {}
-    local i = #str
-
-    while i > 0 do
-        local start_pos = math.max(1, i - 2)
-        table.insert(result, str:sub(start_pos, i))
-        i = i - 3
-    end
-
-    return result
-end
-
-]]
