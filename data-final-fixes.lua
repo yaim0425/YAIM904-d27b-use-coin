@@ -45,6 +45,9 @@ function This_MOD.start()
     --- Crear la monada
     This_MOD.create_item___coin()
 
+    --- Aplicar un MOD previo
+    if GMOD.d18b then GMOD.d18b.start() end
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
@@ -124,10 +127,10 @@ function This_MOD.reference_values()
     This_MOD.decimals = 3
 
     --- Maximo valor de referencia
-    This_MOD.value_maximo = 0
+    This_MOD.value_maximo = { value = 0 }
 
     --- Sufijos posibles
-    This_MOD.Units = { "", "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q", }
+    This_MOD.Units = { "1", "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q", }
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -750,11 +753,12 @@ function This_MOD.create_recipe___coin()
             if space.value == 0 then
                 space.value = math.ceil(Value)
             end
-            if This_MOD.value_maximo < space.value then
-                This_MOD.value_maximo = space.value
-            end
-
             space.value_parts = split_value(tostring(space.value))
+
+            if This_MOD.value_maximo.value < space.value then
+                This_MOD.value_maximo.value = space.value
+                This_MOD.value_maximo.value_parts = space.value_parts
+            end
 
             if space.value > 65000 then
                 space.value = 65000
@@ -901,6 +905,59 @@ function This_MOD.create_recipe___coin()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear la
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for N = 2, #This_MOD.value_maximo.value_parts, 1 do
+        local Char_up = This_MOD.Units[N]
+        local Char_down = This_MOD.Units[N - 1]
+        for action, value in pairs(This_MOD.actions) do
+            local Recipe = GMOD.copy(This_MOD.recipe_base)
+
+            Recipe.name = This_MOD.coin_name .. "-" .. action .. (Char_up ~= "1" and "-" .. Char_up or "")
+            Recipe.category = This_MOD.prefix .. action
+            Recipe.subgroup = "intermediate-product"
+            Recipe.order = "z[" .. (Char_up ~= "1" and "-" .. Char_up or "") .. "]"
+
+            if value == This_MOD.actions.buy then
+                Recipe.localised_name = { "",
+                    (Char_up ~= "1" and "1" .. Char_up .. " " or ""),
+                    { "item-name.coin" }
+                }
+            end
+
+            if value == This_MOD.actions.sell then
+                Recipe.localised_name = { "",
+                    (Char_down ~= "1" and "1" .. Char_down .. " " or ""),
+                    { "item-name.coin" }
+                }
+            end
+
+            Recipe[value[1]] = { {
+                type = "item",
+                amount = 1,
+                name = This_MOD.coin_name .. (Char_up ~= "1" and "-" .. Char_up or ""),
+                ignored_by_stats = 1
+            } }
+
+            Recipe[value[2]] = { {
+                type = "item",
+                amount = 1000,
+                name = This_MOD.coin_name .. (Char_down ~= "1" and "-" .. Char_down or ""),
+                ignored_by_stats = 1000
+            } }
+
+            GMOD.extend(Recipe)
+        end
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Crear categoria y agrega a la maquita
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -932,18 +989,30 @@ function This_MOD.create_item___coin()
     --- Crear el item
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    GMOD.extend({
-        type = "item",
-        name = This_MOD.coin_name,
-        localised_name = { "item-name.coin" },
-        icons = { {
-            icon = "__base__/graphics/icons/coin.png",
-            icon_size = 64
-        } },
-        subgroup = "intermediate-product",
-        order = "z[coin]",
-        stack_size = 1000
-    })
+    for N, _ in pairs(This_MOD.value_maximo.value_parts) do
+        local Char = This_MOD.Units[N]
+
+        GMOD.extend({
+            type = "item",
+            name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
+            localised_name = {
+                "",
+                (Char ~= "1" and "1" .. Char .. " " or ""),
+                { "item-name.coin" }
+            },
+            icons = { {
+                icon = "__base__/graphics/icons/coin.png",
+                icon_size = 64
+            }, {
+                icon = GMOD.signal[string.upper(Char)],
+                shift = { 8, -8 },
+                scale = 0.25
+            } },
+            subgroup = "intermediate-product",
+            order = "z[coin]",
+            stack_size = 1000
+        })
+    end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -961,7 +1030,7 @@ end
 This_MOD.start()
 
 ---------------------------------------------------------------------------------------------------
-ERROR()
+-- ERROR()
 
 --- --- --- --- --- --- --- ---
 
