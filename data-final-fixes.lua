@@ -115,13 +115,19 @@ function This_MOD.reference_values()
     }
 
     --- Valor para objetos sin recetas
-    This_MOD.value_default = 0
+    This_MOD.value_default = 0.5
 
     --- Nombre de la moneda
     This_MOD.coin_name = This_MOD.prefix .. "coin"
 
     --- Valor minimo
-    This_MOD.digits = 10 ^ 3
+    This_MOD.decimals = 3
+
+    --- Maximo valor de referencia
+    This_MOD.value_maximo = 0
+
+    --- Sufijos posibles
+    This_MOD.Units = { "", "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q", }
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -565,9 +571,11 @@ function This_MOD.create_recipe___coin()
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Función para analizar cada element
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Preparar los datos a usar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    This_MOD.to_be_processed = {}
 
     local function get_elements(element)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -575,6 +583,8 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         --- Validar si ya fue procesado
+        if GMOD.has_id(element.name, "A00A") then return end
+
         local That_MOD =
             GMOD.get_id_and_name(element.name) or
             { ids = "-", name = element.name }
@@ -619,6 +629,12 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
+    for _, elements in pairs({ GMOD.items, GMOD.fluids }) do
+        for _, element in pairs(elements) do
+            get_elements(element)
+        end
+    end
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
@@ -626,17 +642,14 @@ function This_MOD.create_recipe___coin()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Obtener valor de un ítem (recursivo)
+    --- Calcular el valor de los afectados
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function get_value(name)
+    local function set_value(name)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         --- Evitar bucles
-        if Cache[name] then
-            Values[name] = 1
-            return 1
-        end
+        if Cache[name] then return 0 end
         Cache[name] = true
 
         --- Valor ya calculado
@@ -653,28 +666,26 @@ function This_MOD.create_recipe___coin()
         end
 
         --- Valor total de la receta
-        local Value = 0
         for _, recipe in pairs(GMOD.recipes[name]) do
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+            --- Agregar el tiempo
+            local Value = recipe.energy_required or 0.5
 
             --- Calcular los ingredients
             if recipe.ingredients and #recipe.ingredients > 0 then
                 for _, ingredient in pairs(recipe.ingredients) do
-                    Value = Value + ingredient.amount * get_value(ingredient.name)
+                    Value = Value + ingredient.amount * set_value(ingredient.name)
                 end
             end
-
-            --- Agregar el tiempo
-            Value = Value + (recipe.energy_required or 0.5)
 
             --- Calcular el valor del objeto
             for _, result in pairs(recipe.results or {}) do
                 local amount = result.amount_max or result.amount
 
                 local Coin = Value / amount
-                Coin = Coin * This_MOD.digits
-                Coin = math.floor(Coin) / This_MOD.digits
-                if Coin > 65000 then Coin = 65000 end
+                Coin = Coin * (10 ^ This_MOD.decimals)
+                Coin = math.floor(Coin) / (10 ^ This_MOD.decimals)
 
                 Values[name] = Values[name] or 0
                 if Coin > 0 and Values[name] < Coin then
@@ -692,6 +703,74 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
+    local function split_value(Value)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Variables a u
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Returm = {}
+        local N = #Value
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Separar el los valores
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        while N > 0 do
+            local start_pos = math.max(1, N - 2)
+            table.insert(Returm, Value:sub(start_pos, N))
+            N = N - 3
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Devolver el resultado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        return Returm
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    for _, spaces in pairs(This_MOD.to_be_processed) do
+        for _, space in pairs(spaces) do
+            set_value(space.element.name)
+            local Value = Values[space.element.name]
+            space.value = math.floor(Value)
+            if space.value == 0 then
+                space.value = math.ceil(Value)
+            end
+            if This_MOD.value_maximo < space.value then
+                This_MOD.value_maximo = space.value
+            end
+
+            space.value_parts = split_value(tostring(space.value))
+
+            if space.value > 65000 then
+                space.value = 65000
+            end
+        end
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    GMOD.var_dump(This_MOD.value_maximo, Values)
+    -- if true then return end
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
@@ -707,6 +786,7 @@ function This_MOD.create_recipe___coin()
         --- Validación
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
+        if not space.value then return end
         if space.value == 0 then return end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -808,56 +888,6 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Preparar los datos a usar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    This_MOD.to_be_processed = {}
-
-    for _, elements in pairs({ GMOD.items, GMOD.fluids }) do
-        for _, element in pairs(elements) do
-            get_elements(element)
-        end
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Crear las recetas
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    for _ = 1, 5, 1 do
-        for _, spaces in pairs(This_MOD.to_be_processed) do
-            for _, space in pairs(spaces) do
-                Flag = GMOD.get_key({
-                    "speed-module",
-                    "efficiency-module",
-                    "productivity-module"
-                }, space.element.name) -- and false
-
-                get_value(space.element.name)
-
-                space.value = math.floor(Values[space.element.name])
-                if space.value == 0 then
-                    space.value = math.ceil(Values[space.element.name])
-                end
-            end
-        end
-    end
-
-    GMOD.var_dump(Values)
-    if true then return end
-
     for _, spaces in pairs(This_MOD.to_be_processed) do
         for _, space in pairs(spaces) do
             create_recipe(space)
@@ -912,7 +942,7 @@ function This_MOD.create_item___coin()
         } },
         subgroup = "intermediate-product",
         order = "z[coin]",
-        stack_size = 100
+        stack_size = 1000
     })
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -933,18 +963,21 @@ This_MOD.start()
 ---------------------------------------------------------------------------------------------------
 ERROR()
 
+--- --- --- --- --- --- --- ---
 
 --- speed-module
 ---     15 time
 ---     5 electronic-circuit
 ---     5 advanced-circuit
 
+--- --- --- --- --- --- --- ---
+
 --- electronic-circuit
 ---     0.5 time
 ---     3 copper-cable
 ---     1 iron-plate
 
---- copper-cable
+--- 2 copper-cable
 ---     0.5 time
 ---     1 copper-plate
 
@@ -955,6 +988,16 @@ ERROR()
 --- iron-plate
 ---     3.2 time
 ---     1 iron-ore
+
+--- 1000 iron-ore
+---     0.02 time
+---     1 YAIM0425-d12b-iron-ore
+
+--- YAIM0425-d12b-iron-ore
+---     0.02 time
+---     1000 iron-ore
+
+--- --- --- --- --- --- --- ---
 
 --- advanced-circuit
 ---     4 copper-cable
@@ -968,3 +1011,20 @@ ERROR()
 
 --- petroleum-gas
 --      ??
+
+--[[
+
+function split_every_three(str)
+    local result = {}
+    local i = #str
+
+    while i > 0 do
+        local start_pos = math.max(1, i - 2)
+        table.insert(result, str:sub(start_pos, i))
+        i = i - 3
+    end
+
+    return result
+end
+
+]]
