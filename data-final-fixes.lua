@@ -842,7 +842,7 @@ function This_MOD.create_recipe___coin()
                 type = space.type,
                 amount = 1,
                 name = space.element.name,
-                ignored_by_stats = space.value
+                ignored_by_stats = 1
             } }
 
             Recipe[value[2]] = { {
