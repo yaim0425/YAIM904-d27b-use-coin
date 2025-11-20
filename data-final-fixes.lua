@@ -108,6 +108,9 @@ function This_MOD.reference_values()
         localised_description = { "" },
         energy_required = 1,
 
+        allow_productivity = true,
+        maximum_productivity = 1000,
+
         hide_from_player_crafting = true,
         hidden_in_factoriopedia = true,
         subgroup = "",
@@ -921,33 +924,10 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         Recipe.name = This_MOD.coin_name .. "-" .. space.action .. (space.char_up ~= "1" and "-" .. space.char_up or "")
+        Recipe.localised_name = { "", { "item-name.coin" } }
         Recipe.category = This_MOD.prefix .. space.action
         Recipe.subgroup = "intermediate-product"
         Recipe.order = "z[" .. (space.char_up ~= "1" and "-" .. space.char_up or "") .. "]"
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Apodo a usar
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        if space.value == This_MOD.actions.buy then
-            Recipe.localised_name = { "",
-                (space.char_up ~= "1" and "1" .. space.char_up .. " " or ""),
-                { "item-name.coin" }
-            }
-        end
-
-        if space.value == This_MOD.actions.sell then
-            Recipe.localised_name = { "",
-                (space.char_down ~= "1" and "1" .. space.char_down .. " " or ""),
-                { "item-name.coin" }
-            }
-        end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
