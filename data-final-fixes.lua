@@ -1043,11 +1043,7 @@ function This_MOD.create_item___coin()
         GMOD.extend({
             type = "item",
             name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
-            localised_name = {
-                "",
-                (Char ~= "1" and "1" .. Char .. " " or ""),
-                { "item-name.coin" }
-            },
+            localised_name = { "", { "item-name.coin" } },
             icons = { {
                 icon = "__base__/graphics/icons/coin.png",
                 icon_size = 64
