@@ -108,9 +108,6 @@ function This_MOD.reference_values()
         localised_description = { "" },
         energy_required = 1,
 
-        allow_productivity = true,
-        maximum_productivity = 1000,
-
         hide_from_player_crafting = true,
         hidden_in_factoriopedia = true,
         subgroup = "",
@@ -737,6 +734,7 @@ function This_MOD.create_recipe___coin()
                     type = "item",
                     amount = Value,
                     name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
+                    ignored_by_productivity = 0,
                     ignored_by_stats = Value
                 })
             end
@@ -846,6 +844,7 @@ function This_MOD.create_recipe___coin()
                 type = space.type,
                 amount = 1,
                 name = space.element.name,
+                ignored_by_productivity = 0,
                 ignored_by_stats = 1
             } }
 
@@ -924,11 +923,22 @@ function This_MOD.create_recipe___coin()
         --- Actualizar algunas propiedades
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        Recipe.name = This_MOD.coin_name .. "-" .. space.action .. (space.char_up ~= "1" and "-" .. space.char_up or "")
+        local That_MOD =
+            GMOD.get_id_and_name(This_MOD.coin_name) or
+            { ids = "-", name = This_MOD.coin_name }
+
+        local Name =
+            GMOD.name .. That_MOD.ids ..
+            This_MOD.id .. "-" ..
+            space.action .. "-" ..
+            That_MOD.name ..
+            (space.char_up ~= "1" and "-" .. space.char_up or "")
+
+        Recipe.name = Name
         Recipe.localised_name = { "", { "item-name.coin" } }
         Recipe.category = This_MOD.prefix .. space.action
         Recipe.subgroup = "intermediate-product"
-        Recipe.order = "z[" .. (space.char_up ~= "1" and "-" .. space.char_up or "") .. "]"
+        Recipe.order = "z[" .. (space.char_up ~= "1" and space.char_up or "") .. "]"
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -944,6 +954,7 @@ function This_MOD.create_recipe___coin()
             type = "item",
             amount = 1,
             name = This_MOD.coin_name .. (space.char_up ~= "1" and "-" .. space.char_up or ""),
+            ignored_by_productivity = 0,
             ignored_by_stats = 1
         } }
 
@@ -951,6 +962,7 @@ function This_MOD.create_recipe___coin()
             type = "item",
             amount = 1000,
             name = This_MOD.coin_name .. (space.char_down ~= "1" and "-" .. space.char_down or ""),
+            ignored_by_productivity = 0,
             ignored_by_stats = 1000
         } }
 
