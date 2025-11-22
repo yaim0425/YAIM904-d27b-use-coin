@@ -938,7 +938,7 @@ function This_MOD.create_recipe___coin()
         Recipe.localised_name = { "", { "item-name.coin" } }
         Recipe.category = This_MOD.prefix .. space.action
         Recipe.subgroup = "intermediate-product"
-        Recipe.order = "z[" .. (space.char_up ~= "1" and space.char_up or "") .. "]"
+        Recipe.order = "z[" .. space.order .. "]"
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -984,6 +984,7 @@ function This_MOD.create_recipe___coin()
     for N = 2, #This_MOD.value_maximo.coins, 1 do
         for action, value in pairs(This_MOD.actions) do
             recipes_to_coins({
+                order = N .. (value == This_MOD.actions.sell and 0 or 1),
                 value = value,
                 action = action,
                 char_up = This_MOD.Units[N],
