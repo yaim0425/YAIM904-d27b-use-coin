@@ -57,9 +57,6 @@ function This_MOD.start()
         end
     end
 
-    -- GMOD.var_dump(This_MOD.to_be_processed)
-    -- ERROR()
-
     --- Aplicar un MOD previo
     if GMOD.d01b then GMOD.d01b.start() end
     if GMOD.d18b then GMOD.d18b.start() end
@@ -792,10 +789,15 @@ function This_MOD.calculate_coins()
             N = N - 3
         end
 
+        --- Elimnar los valores inecesarios
+        local Delete = {}
         for i, part in pairs(Returm) do
             if part.amount == 0 then
-                Returm[i] = nil
+                table.insert(Delete, 1, i)
             end
+        end
+        for _, i in pairs(Delete) do
+            table.remove(Returm, i)
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
