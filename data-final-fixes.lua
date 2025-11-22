@@ -40,12 +40,28 @@ function This_MOD.start()
     end
 
     --- Recetas de conversión
-    This_MOD.create_recipe___coin()
+    This_MOD.get_elements_to_effect()
+    This_MOD.calculate_coins()
+    This_MOD.create_coins()
+    This_MOD.create_recipe_to_change_coins()
+    This_MOD.create_recipe_categories()
 
-    --- Crear la monada
-    This_MOD.create_item___coin()
+    --- Modificar los elementos
+    for _, spaces in pairs(This_MOD.to_be_processed) do
+        for _, space in pairs(spaces) do
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+            This_MOD.create_recipe_to_affect(space)
+
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        end
+    end
+
+    -- GMOD.var_dump(This_MOD.to_be_processed)
+    -- ERROR()
 
     --- Aplicar un MOD previo
+    if GMOD.d01b then GMOD.d01b.start() end
     if GMOD.d18b then GMOD.d18b.start() end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -142,7 +158,7 @@ end
 
 
 ---------------------------------------------------------------------------------------------------
----[ Cambios del MOD ]---
+---[ Datos para el mercado ]---
 ---------------------------------------------------------------------------------------------------
 
 function This_MOD.get_elements()
@@ -562,24 +578,30 @@ end
 
 ---------------------------------------------------------------------------------------------------
 
-function This_MOD.create_recipe___coin()
+
+
+
+
+---------------------------------------------------------------------------------------------------
+---[ Cambios del MOD ]---
+---------------------------------------------------------------------------------------------------
+
+function This_MOD.get_elements_to_effect()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Variables a usar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local Values, Cache = {}, {}
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Preparar los datos a usar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
     This_MOD.to_be_processed = {}
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Evaluar cada element
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local function get_elements(element)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -613,9 +635,10 @@ function This_MOD.create_recipe___coin()
 
         local Space = {}
 
-        Space.name = Name
         Space.element = element
         Space.type = element.type == "fluid" and "fluid" or "item"
+
+        -- Space.tech = GMOD.get_technology(GMOD.recipes[element.name])
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -633,6 +656,16 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Buscar los elements a afectar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
     for _, elements in pairs({ GMOD.items, GMOD.fluids }) do
         for _, element in pairs(elements) do
             get_elements(element)
@@ -640,13 +673,23 @@ function This_MOD.create_recipe___coin()
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+function This_MOD.calculate_coins()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Variables a usar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Values, Cache = {}, {}
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Calcular el valor de los afectados
+    --- Calculates el valor del element dado
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local function set_value(name)
@@ -707,7 +750,17 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    local function coins(value)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Convertir el valor deddo en las monedas
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function split_coins(value)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Variables a u
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -728,17 +781,21 @@ function This_MOD.create_recipe___coin()
         while N > 0 do
             local start_pos = math.max(1, N - 2)
             local Value = tonumber(value:sub(start_pos, N))
-            if Value > 0 then
-                local Char = This_MOD.Units[#Returm + 1]
-                table.insert(Returm, {
-                    type = "item",
-                    amount = Value,
-                    name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
-                    ignored_by_productivity = 0,
-                    ignored_by_stats = Value
-                })
-            end
+            local Char = This_MOD.Units[#Returm + 1]
+            table.insert(Returm, {
+                type = "item",
+                amount = Value,
+                name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
+                ignored_by_productivity = 0,
+                ignored_by_stats = Value
+            })
             N = N - 3
+        end
+
+        for i, part in pairs(Returm) do
+            if part.amount == 0 then
+                Returm[i] = nil
+            end
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -756,155 +813,91 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Calcular el valor de los afectados
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
     for _, spaces in pairs(This_MOD.to_be_processed) do
         for _, space in pairs(spaces) do
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+            --- Calcular el valor
             set_value(space.element.name)
+
+            --- Redoncear el valor
             local Value = Values[space.element.name]
             space.value = math.floor(Value)
             if space.value == 0 then
                 space.value = math.ceil(Value)
             end
-            space.coins = coins(tostring(space.value))
 
+            --- Convertir el valor en monedas
+            space.coins = split_coins(tostring(space.value))
+
+            --- Guardar el maximo valor a usar
             if This_MOD.value_maximo.value < space.value then
                 This_MOD.value_maximo.value = space.value
                 This_MOD.value_maximo.coins = space.coins
             end
 
-            if space.value > 65000 then
-                space.value = 65000
-            end
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         end
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+function This_MOD.create_coins()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if GMOD.items[This_MOD.coin_name] then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Crear la receta para cada item dado
+    --- Crear el item
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function create_recipe(space)
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Validación
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    for N, _ in pairs(This_MOD.value_maximo.coins) do
+        local Char = This_MOD.Units[N]
 
-        if not space.value then return end
-        if space.value == 0 then return end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Crear la recipes
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for action, value in pairs(This_MOD.actions) do
-            local Recipe = GMOD.copy(This_MOD.recipe_base)
-
-            local That_MOD =
-                GMOD.get_id_and_name(space.element.name) or
-                { ids = "-", name = space.element.name }
-
-            local Name =
-                GMOD.name .. That_MOD.ids ..
-                This_MOD.id .. "-" ..
-                action .. "-" ..
-                That_MOD.name
-
-            Recipe.name = Name
-            Recipe.energy_required = 0.002
-            Recipe.order = space.element.order
-            Recipe.category = This_MOD.prefix .. action
-            Recipe.localised_name = space.element.localised_name
-            Recipe.icons = GMOD.copy(space.element.icons)
-
-            if value == This_MOD.actions.sell then
-                Recipe.localised_name = { "item-name.coin" }
-                table.insert(Recipe.icons, {
-                    icon = "__base__/graphics/icons/coin.png",
-                    scale = GMOD.has_id(space.element.name, "d01b") and 0.35 or 0.25,
-                    icon_size = 64,
-                    shift = { 8, 8 }
-                })
-            end
-
-            Recipe.subgroup =
-                This_MOD.prefix ..
-                space.element.subgroup .. "-" ..
-                action
-
-            Recipe[value[1]] = { {
-                type = space.type,
-                amount = 1,
-                name = space.element.name,
-                ignored_by_productivity = 0,
-                ignored_by_stats = 1
-            } }
-
-            Recipe[value[2]] = space.coins
-
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-            --- Crear el subgrupo para el objeto
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-            --- Duplicar el subgrupo
-            if not GMOD.subgroups[Recipe.subgroup] then
-                GMOD.duplicate_subgroup(space.element.subgroup, Recipe.subgroup)
-
-                --- Renombrar
-                local Subgroup = GMOD.subgroups[Recipe.subgroup]
-                local Order = GMOD.subgroups[space.element.subgroup].order
-                local Index = value == This_MOD.actions.buy and 6 or 7
-
-                --- Actualizar el order
-                Subgroup.order = Index .. Order:sub(2)
-            end
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-            --- Crear el prototipo
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-            GMOD.extend(Recipe)
-
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    for _, spaces in pairs(This_MOD.to_be_processed) do
-        for _, space in pairs(spaces) do
-            create_recipe(space)
-        end
+        GMOD.extend({
+            type = "item",
+            name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
+            localised_name = { "", { "item-name.coin" } },
+            icons = { {
+                icon = "__base__/graphics/icons/coin.png",
+                icon_size = 64
+            }, {
+                icon = GMOD.signal[string.upper(Char)],
+                shift = { 8, -8 },
+                scale = 0.25
+            } },
+            subgroup = "intermediate-product",
+            order = "z[" .. N .. "]",
+            stack_size = 1000
+        })
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
 
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Crear las recetas para intercambiar las monedas
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+function This_MOD.create_recipe_to_change_coins()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Recetas para intercambiar las monedas
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local function recipes_to_coins(space)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -981,6 +974,16 @@ function This_MOD.create_recipe___coin()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Recorrer las monedas necesarias
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
     for N = 2, #This_MOD.value_maximo.coins, 1 do
         for action, value in pairs(This_MOD.actions) do
             recipes_to_coins({
@@ -993,15 +996,11 @@ function This_MOD.create_recipe___coin()
         end
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
 
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Crear categoria y agrega a la maquita
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+function This_MOD.create_recipe_categories()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local Category = GMOD.entities[This_MOD.new_entity_name].crafting_categories
     for action, _ in pairs(This_MOD.actions) do
@@ -1011,15 +1010,119 @@ function This_MOD.create_recipe___coin()
         table.insert(Category, Name)
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function This_MOD.create_item___coin()
+function This_MOD.create_recipe_to_affect(space)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if not space.value then return end
+    if space.value == 0 then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear la recipes
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for action, value in pairs(This_MOD.actions) do
+        local Recipe = GMOD.copy(This_MOD.recipe_base)
+
+        local That_MOD =
+            GMOD.get_id_and_name(space.element.name) or
+            { ids = "-", name = space.element.name }
+
+        local Name =
+            GMOD.name .. That_MOD.ids ..
+            This_MOD.id .. "-" ..
+            action .. "-" ..
+            That_MOD.name
+
+        Recipe.name = Name
+        Recipe.energy_required = 0.002
+        Recipe.order = space.element.order
+        Recipe.category = This_MOD.prefix .. action
+        Recipe.localised_name = space.element.localised_name
+        Recipe.icons = GMOD.copy(space.element.icons)
+
+        if value == This_MOD.actions.sell then
+            Recipe.localised_name = { "item-name.coin" }
+            table.insert(Recipe.icons, {
+                icon = "__base__/graphics/icons/coin.png",
+                scale = GMOD.has_id(space.element.name, "d01b") and 0.35 or 0.25,
+                icon_size = 64,
+                shift = { 8, 8 }
+            })
+        end
+
+        Recipe.subgroup =
+            This_MOD.prefix ..
+            space.element.subgroup .. "-" ..
+            action
+
+        Recipe[value[1]] = { {
+            type = space.type,
+            amount = 1,
+            name = space.element.name,
+            ignored_by_productivity = 0,
+            ignored_by_stats = 1
+        } }
+
+        Recipe[value[2]] = space.coins
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Crear el subgrupo para el objeto
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Duplicar el subgrupo
+        if not GMOD.subgroups[Recipe.subgroup] then
+            GMOD.duplicate_subgroup(space.element.subgroup, Recipe.subgroup)
+
+            --- Renombrar
+            local Subgroup = GMOD.subgroups[Recipe.subgroup]
+            local Order = GMOD.subgroups[space.element.subgroup].order
+            local Index = value == This_MOD.actions.buy and 6 or 7
+
+            --- Actualizar el order
+            Subgroup.order = Index .. Order:sub(2)
+        end
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Crear el prototipo
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        GMOD.extend(Recipe)
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+function This_MOD.create_tech_(space)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if GMOD.items[This_MOD.coin_name] then return end
+    if not space.tech then return end
+    if data.raw.technology[space.name .. "-tech"] then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1028,29 +1131,66 @@ function This_MOD.create_item___coin()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Crear el item
+    --- Duplicar el elemento
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for N, _ in pairs(This_MOD.value_maximo.coins) do
-        local Char = This_MOD.Units[N]
+    local Tech = GMOD.copy(space.tech)
 
-        GMOD.extend({
-            type = "item",
-            name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
-            localised_name = { "", { "item-name.coin" } },
-            icons = { {
-                icon = "__base__/graphics/icons/coin.png",
-                icon_size = 64
-            }, {
-                icon = GMOD.signal[string.upper(Char)],
-                shift = { 8, -8 },
-                scale = 0.25
-            } },
-            subgroup = "intermediate-product",
-            order = "z[" .. N .. "]",
-            stack_size = 1000
-        })
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Cambiar algunas propiedades
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Nombre
+    Tech.name = space.name .. "-tech"
+
+    --- Descripción
+    Tech.localised_description = { "" }
+
+    --- Tech previas
+    Tech.prerequisites = { space.tech.name }
+    for _, ingredient in pairs(data.raw.recipe[space.name].ingredients) do
+        if GMOD.has_id(ingredient.name, This_MOD.id) then
+            if Tech.prerequisites[1] == space.tech.name then
+                Tech.prerequisites = {}
+            end
+            if data.raw.technology[ingredient.name .. "-tech"] then
+                table.insert(Tech.prerequisites, ingredient.name .. "-tech")
+            end
+        end
     end
+
+    --- Efecto de la tech
+    Tech.effects = { {
+        type = "unlock-recipe",
+        recipe = space.name
+    } }
+
+    --- Tech se activa con una fabricación
+    if Tech.research_trigger then
+        Tech.research_trigger = {
+            type = "craft-item",
+            item = space.belt,
+            count = 1
+        }
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear el prototipo
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    GMOD.extend(Tech)
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
