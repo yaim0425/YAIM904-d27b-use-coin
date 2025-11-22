@@ -51,7 +51,9 @@ function This_MOD.start()
         for _, space in pairs(spaces) do
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-            This_MOD.create_recipe_to_affect(space)
+            --- Crear los elementos
+            This_MOD.create_recipe_to_effect(space)
+            This_MOD.create_tech_to_effect(space)
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         end
@@ -120,6 +122,7 @@ function This_MOD.reference_values()
         localised_name = {},
         localised_description = { "" },
         energy_required = 1,
+        enabled = false,
 
         hide_from_player_crafting = true,
         hidden_in_factoriopedia = true,
@@ -605,20 +608,28 @@ function This_MOD.get_elements_to_effect()
         --- Validación
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- Validar si ya fue procesado
         if GMOD.has_id(element.name, "A00A") then return end
 
+        --- Validar si ya fue procesado
         local That_MOD =
             GMOD.get_id_and_name(element.name) or
             { ids = "-", name = element.name }
 
-        local Name =
-            GMOD.name .. That_MOD.ids ..
-            This_MOD.id .. "-" ..
-            "sell-" ..
-            That_MOD.name
+        local Effects = {}
+        for action, _ in pairs(This_MOD.actions) do
+            local Recipe_name =
+                GMOD.name .. That_MOD.ids ..
+                This_MOD.id .. "-" ..
+                action .. "-" ..
+                That_MOD.name
 
-        if data.raw.recipe[Name] then return end
+            table.insert(Effects, {
+                type = "unlock-recipe",
+                recipe = Recipe_name
+            })
+
+            if data.raw.recipe[Recipe_name] then return end
+        end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -631,11 +642,17 @@ function This_MOD.get_elements_to_effect()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         local Space = {}
+        Space.name =
+            GMOD.name .. That_MOD.ids ..
+            This_MOD.id .. "-" ..
+            That_MOD.name
 
         Space.element = element
         Space.type = element.type == "fluid" and "fluid" or "item"
 
-        -- Space.tech = GMOD.get_technology(GMOD.recipes[element.name])
+        Space.effects = Effects
+        Space.sell = Effects[1].recipe
+        Space.buy = Effects[2].recipe
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -934,6 +951,7 @@ function This_MOD.create_recipe_to_change_coins()
         Recipe.category = This_MOD.prefix .. space.action
         Recipe.subgroup = "intermediate-product"
         Recipe.order = "z[" .. space.order .. "]"
+        Recipe.enabled = nil
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1015,7 +1033,7 @@ function This_MOD.create_recipe_categories()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function This_MOD.create_recipe_to_affect(space)
+function This_MOD.create_recipe_to_effect(space)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1036,17 +1054,7 @@ function This_MOD.create_recipe_to_affect(space)
     for action, value in pairs(This_MOD.actions) do
         local Recipe = GMOD.copy(This_MOD.recipe_base)
 
-        local That_MOD =
-            GMOD.get_id_and_name(space.element.name) or
-            { ids = "-", name = space.element.name }
-
-        local Name =
-            GMOD.name .. That_MOD.ids ..
-            This_MOD.id .. "-" ..
-            action .. "-" ..
-            That_MOD.name
-
-        Recipe.name = Name
+        Recipe.name = space[action]
         Recipe.energy_required = 0.002
         Recipe.order = space.element.order
         Recipe.category = This_MOD.prefix .. action
@@ -1057,7 +1065,9 @@ function This_MOD.create_recipe_to_affect(space)
             Recipe.localised_name = { "item-name.coin" }
             table.insert(Recipe.icons, {
                 icon = "__base__/graphics/icons/coin.png",
-                scale = GMOD.has_id(space.element.name, "d01b") and 0.35 or 0.25,
+                scale =
+                    GMOD.has_id(space.element.name, "d01b") and
+                    0.35 or 0.25,
                 icon_size = 64,
                 shift = { 8, 8 }
             })
@@ -1118,69 +1128,48 @@ function This_MOD.create_recipe_to_affect(space)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function This_MOD.create_tech_(space)
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+function This_MOD.create_tech_to_effect(space)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if not space.tech then return end
-    if data.raw.technology[space.name .. "-tech"] then return end
+    if not space.value then return end
+    if space.value == 0 then return end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Duplicar el elemento
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local Tech = GMOD.copy(space.tech)
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Cambiar algunas propiedades
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    --- Nombre
+    --- Tipo y nombre
+    local Tech = {}
+    Tech.type = "technology"
     Tech.name = space.name .. "-tech"
 
-    --- Descripción
+    --- Apodo y descripción
+    Tech.localised_name = space.element.localised_name
     Tech.localised_description = { "" }
 
-    --- Tech previas
-    Tech.prerequisites = { space.tech.name }
-    for _, ingredient in pairs(data.raw.recipe[space.name].ingredients) do
-        if GMOD.has_id(ingredient.name, This_MOD.id) then
-            if Tech.prerequisites[1] == space.tech.name then
-                Tech.prerequisites = {}
-            end
-            if data.raw.technology[ingredient.name .. "-tech"] then
-                table.insert(Tech.prerequisites, ingredient.name .. "-tech")
-            end
-        end
-    end
+    --- Duplicar la imagen
+    Tech.icons = GMOD.copy(space.element.icons)
+
+    --- Ocultar las recetas
+    Tech.hidden = true
 
     --- Efecto de la tech
-    Tech.effects = { {
-        type = "unlock-recipe",
-        recipe = space.name
-    } }
+    Tech.effects = space.effects
 
     --- Tech se activa con una fabricación
-    if Tech.research_trigger then
-        Tech.research_trigger = {
-            type = "craft-item",
-            item = space.belt,
-            count = 1
-        }
-    end
+    Tech.research_trigger = {
+        type = "craft-" .. space.type,
+        [space.type] = space.element.name,
+        count = 1
+    }
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
