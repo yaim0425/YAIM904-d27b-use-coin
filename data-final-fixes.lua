@@ -762,7 +762,7 @@ function This_MOD.calculate_coins()
         --- Variables a u
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        local Returm = {}
+        local Return = {}
         local N = #value
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -778,8 +778,8 @@ function This_MOD.calculate_coins()
         while N > 0 do
             local start_pos = math.max(1, N - 2)
             local Value = tonumber(value:sub(start_pos, N))
-            local Char = This_MOD.Units[#Returm + 1]
-            table.insert(Returm, {
+            local Char = This_MOD.Units[#Return + 1]
+            table.insert(Return, {
                 type = "item",
                 amount = Value,
                 name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
@@ -791,13 +791,13 @@ function This_MOD.calculate_coins()
 
         --- Elimnar los valores inecesarios
         local Delete = {}
-        for i, part in pairs(Returm) do
+        for i, part in pairs(Return) do
             if part.amount == 0 then
                 table.insert(Delete, 1, i)
             end
         end
         for _, i in pairs(Delete) do
-            table.remove(Returm, i)
+            table.remove(Return, i)
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -810,7 +810,7 @@ function This_MOD.calculate_coins()
         --- Devolver el resultado
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        return Returm
+        return Return
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
