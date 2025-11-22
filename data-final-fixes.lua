@@ -1046,7 +1046,7 @@ function This_MOD.create_item___coin()
                 scale = 0.25
             } },
             subgroup = "intermediate-product",
-            order = "z[coin]",
+            order = "z[" .. N .. "]",
             stack_size = 1000
         })
     end
