@@ -1156,7 +1156,9 @@ function This_MOD.create_tech_to_effect(space)
     Tech.localised_description = { "" }
 
     --- Duplicar la imagen
-    Tech.icons = GMOD.copy(space.element.icons)
+    Tech.icons = GMOD.copy(data.raw.recipe[space.sell].icons)
+    Tech.icons[#Tech.icons].shift = { 25, 25 }
+    Tech.icons[#Tech.icons].scale = 1
 
     --- Ocultar las recetas
     Tech.hidden = true
