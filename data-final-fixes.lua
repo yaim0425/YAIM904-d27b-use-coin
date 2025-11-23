@@ -1157,8 +1157,10 @@ function This_MOD.create_tech_to_effect(space)
 
     --- Duplicar la imagen
     Tech.icons = GMOD.copy(data.raw.recipe[space.sell].icons)
-    Tech.icons[#Tech.icons].shift = { 25, 25 }
-    Tech.icons[#Tech.icons].scale = 1
+    for _, icon in pairs(Tech.icons) do
+        icon.icon_size = icon.icon_size or 64
+        icon.scale = icon.scale or 0.5
+    end
 
     --- Ocultar las recetas
     Tech.hidden = true
