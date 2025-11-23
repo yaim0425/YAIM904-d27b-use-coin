@@ -1064,12 +1064,12 @@ function This_MOD.create_recipe_to_effect(space)
         if value == This_MOD.actions.sell then
             Recipe.localised_name = { "item-name.coin" }
             table.insert(Recipe.icons, {
-                icon = "__base__/graphics/icons/coin.png",
+                icon = GMOD.items[This_MOD.coin_name].icons[1].icon,
                 scale =
-                    GMOD.has_id(space.element.name, "d01b") and
+                    GMOD.has_id(space.element.name, GMOD.d01b.id) and
                     0.35 or 0.25,
                 icon_size = 64,
-                shift = { 8, 8 }
+                shift = { 14, 14 }
             })
         end
 
