@@ -727,34 +727,37 @@ function This_MOD.calculate_coins()
         end
 
         --- Valor total de la receta
+        Values[name] = This_MOD.value_default
         for _, recipe in pairs(GMOD.recipes[name]) do
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+            if not GMOD.has_id(recipe.name, This_MOD.id) then
+                --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-            --- Agregar el tiempo
-            local Value = recipe.energy_required or 0.5
+                --- Agregar el tiempo
+                local Value = recipe.energy_required or 0.5
 
-            --- Calcular los ingredients
-            if recipe.ingredients and #recipe.ingredients > 0 then
-                for _, ingredient in pairs(recipe.ingredients) do
-                    Value = Value + ingredient.amount * set_value(ingredient.name)
+                --- Calcular los ingredients
+                if recipe.ingredients and #recipe.ingredients > 0 then
+                    for _, ingredient in pairs(recipe.ingredients) do
+                        Value = Value + ingredient.amount * set_value(ingredient.name)
+                    end
                 end
-            end
 
-            --- Calcular el valor del objeto
-            for _, result in pairs(recipe.results or {}) do
-                local amount = result.amount_max or result.amount
+                --- Calcular el valor del objeto
+                for _, result in pairs(recipe.results or {}) do
+                    local amount = result.amount_max or result.amount
 
-                local Coin = Value / amount
-                Coin = Coin * (10 ^ This_MOD.decimals)
-                Coin = math.floor(Coin) / (10 ^ This_MOD.decimals)
+                    local Coin = Value / amount
+                    Coin = Coin * (10 ^ This_MOD.decimals)
+                    Coin = math.floor(Coin) / (10 ^ This_MOD.decimals)
 
-                Values[name] = Values[name] or 0
-                if Coin > 0 and Values[name] < Coin then
-                    Values[name] = Coin
+                    Values[name] = Values[name] or 0
+                    if Coin > 0 and Values[name] < Coin then
+                        Values[name] = Coin
+                    end
                 end
-            end
 
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+                --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+            end
         end
 
         --- Asignar el menor valor
