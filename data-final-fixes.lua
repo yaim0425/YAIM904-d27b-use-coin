@@ -586,6 +586,189 @@ end
 ---[ Cambios del MOD ]---
 ---------------------------------------------------------------------------------------------------
 
+Math = {}
+
+-- Convierte un número en una tabla (decimal normalizado a 4 dígitos)
+function Math.to_table(num)
+    if type(num) ~= "number" then return num end
+
+    local S = tostring(num)
+    local Result = {}
+    local Dot = S:find("%.")
+
+    if Dot then
+        local Decimal = S:sub(Dot + 1)
+
+        if #Decimal > 4 then
+            Decimal = Decimal:sub(1, 4)
+        end
+
+        while #Decimal < 4 do
+            Decimal = Decimal .. "0"
+        end
+
+        table.insert(Result, tonumber(Decimal))
+        table.insert(Result, ".")
+        S = S:sub(1, Dot - 1)
+    end
+
+    -- Procesar la parte entera en bloques de hasta 3 dígitos
+    for i = #S, 1, -3 do
+        local Block = tonumber(S:sub(math.max(1, i - 2), i))
+        table.insert(Result, Block)
+    end
+
+    return Result
+end
+
+-- Redondea un número en tabla según las reglas definidas
+function Math.round_table(tbl)
+    local Tbl = Math.copy(tbl)
+    if #Tbl == 1 and Tbl[1] == 0 then
+        return Tbl
+    end
+
+    local Has_decimal = Tbl[2] == "."
+    local Decimal = Has_decimal and Tbl[1] or nil
+
+    local Start_index = Has_decimal and 3 or 1
+    local Integer_value = 0
+
+    if Start_index < #Tbl then
+        Integer_value = 1
+    else
+        Integer_value = Tbl[Start_index] or 0
+    end
+
+    -- Regla 1: Si el entero es mayor a 0, eliminar decimal
+    if Integer_value > 0 then
+        if Has_decimal then
+            table.remove(Tbl, 1)
+            table.remove(Tbl, 1)
+        end
+        return Tbl
+    end
+
+    -- Regla 2: Entero = 0 y decimal > 0 → dejar solo {"1"}
+    if Integer_value == 0 and Decimal and Decimal > 0 then
+        return { 1 }
+    end
+end
+
+-- Copia profunda de un valor o tabla
+function Math.copy(value)
+    if type(value) ~= "table" then return value end
+
+    local Copy = {}
+    for key, val in pairs(value) do
+        local New_key = (type(key) == "table") and Math.copy(key) or key
+        local New_val = (type(val) == "table") and Math.copy(val) or val
+        Copy[New_key] = New_val
+    end
+
+    return Copy
+end
+
+-- Suma dos números en tabla
+function Math.add(a, b)
+    local A_tbl = Math.copy(a)
+    local B_tbl = Math.copy(b)
+
+    local A_has_decimal = A_tbl[2] == "."
+    local B_has_decimal = B_tbl[2] == "."
+
+    local A_decimal = A_has_decimal and A_tbl[1] or 0
+    local B_decimal = B_has_decimal and B_tbl[1] or 0
+
+    local Result = {}
+    local Carry = 0
+
+    -- Sumar decimales con carry
+    if A_has_decimal or B_has_decimal then
+        local Decimal_sum = A_decimal + B_decimal
+        if Decimal_sum >= 10000 then
+            Carry = math.floor(Decimal_sum / 10000)
+            Decimal_sum = Decimal_sum % 10000
+        end
+        if Decimal_sum > 0 then
+            table.insert(Result, Decimal_sum)
+            table.insert(Result, ".")
+        end
+    end
+
+    local i_a = A_has_decimal and 3 or 1
+    local i_b = B_has_decimal and 3 or 1
+
+    -- Sumar bloques enteros con carry
+    while i_a <= #A_tbl or i_b <= #B_tbl or Carry > 0 do
+        local N_a = A_tbl[i_a] or 0
+        local N_b = B_tbl[i_b] or 0
+
+        local Sum = N_a + N_b + Carry
+        Carry = math.floor(Sum / 1000)
+        Sum = Sum % 1000
+
+        table.insert(Result, Sum)
+
+        i_a = i_a + 1
+        i_b = i_b + 1
+    end
+
+    return Result
+end
+
+-- Multiplica un número en tabla por un número
+function Math.mult(tbl, num)
+    if type(num) ~= "number" then return tbl end
+
+    local Tbl = Math.copy(tbl)
+    local Result = {}
+    local Carry = 0
+
+    local Has_decimal = Tbl[2] == "."
+    local Start_index = Has_decimal and 1 or 0
+
+    -- Multiplicar decimales con carry
+    if Has_decimal then
+        local Dec = Tbl[1] * num
+        if Dec >= 10000 then
+            Carry = math.floor(Dec / 10000)
+            Dec = Dec % 10000
+        else
+            Carry = 0
+        end
+        -- Insertar decimal solo si es mayor a 0
+        if Dec > 0 then
+            table.insert(Result, Dec)
+            table.insert(Result, ".")
+        end
+    end
+
+    -- Multiplicar bloques enteros con carry
+    for i = Has_decimal and 3 or 1, #Tbl do
+        local N = Tbl[i] * num + Carry
+        Carry = math.floor(N / 1000)
+        N = N % 1000
+        table.insert(Result, N)
+    end
+
+    if Carry > 0 then
+        table.insert(Result, Carry)
+    end
+
+    return Result
+end
+
+---------------------------------------------------------------------------------------------------
+
+
+
+
+
+---------------------------------------------------------------------------------------------------
+---[ Cambios del MOD ]---
+---------------------------------------------------------------------------------------------------
+
 function This_MOD.get_elements_to_effect()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Variables a usar
@@ -758,6 +941,10 @@ function This_MOD.calculate_coins()
 
                 --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
             end
+        end
+
+        if Values[name] > 2 ^ 46 then
+            Values[name] = 2 ^ 46
         end
 
         --- Asignar el menor valor
