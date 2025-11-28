@@ -605,9 +605,7 @@ function Math:new()
     --- Copiar las funciones de la clase
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for key, value in pairs(Math) do
-        New_math[key] = value
-    end
+    for key, value in pairs(Math) do New_math[key] = value end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
