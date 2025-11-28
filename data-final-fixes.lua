@@ -588,6 +588,10 @@ end
 
 local Math = {}
 
+---------------------------------------------------------------------------------------------------
+---[ Operaciones de la clase  ]---
+---------------------------------------------------------------------------------------------------
+
 function Math:new()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Contenedor de la clase
@@ -617,7 +621,7 @@ function Math:new()
     --- Inicializar las variables de la clase
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    Math:clear()
+    New_math:clear()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -633,8 +637,6 @@ function Math:new()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
-
----------------------------------------------------------------------------------------------------
 
 function Math:clear()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -659,61 +661,57 @@ function Math:clear()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function Math:validate(num)
+function Math:validate()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validar el formato
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if type(num) ~= "table" then return end
+    if type(self.value) ~= "table" then return end
 
-    local Valide = true
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for i = 1, #num do
-        if i == 2 then
-            if num[i] ~= "." then
-                Valide = false
-                break
-            end
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validar cada valor
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Index = 1
+
+    while Index <= #self.value do
+        local Value = self.value[Index]
+        if Index == 2 then
+            if Value ~= "." then break end
         else
-            if type(num[i]) ~= "number" then
-                Valide = false
-                break
-            elseif num[i] < 0 then
-                Valide = false
-                break
-            elseif i == 1 and num[i] > 10000 then
-                Valide = false
-                break
-            elseif i ~= 1 and num[i] > 1000 then
-                Valide = false
-                break
-            end
+            if type(Value) ~= "number" then break end
+            if Value < 0 then break end
+            if Index == 1 and Value > 10000 then break end
+            if Index ~= 1 and Value > 1000 then break end
         end
+        Index = Index + 1
     end
 
-    if not Valide and num == self.value then
-        Math:clear()
-    end
+    if Index <= #self.value then self:clear() end
 
-    return Valide
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Devolver el resultado
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    return Index > #self.value
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function Math:update(num)
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    Math:clear()
-
-    if not Math:validate(num) then
-        return
-    end
-
-    for _, value in pairs(num) do
-        table.insert(self.value, value)
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-end
-
+---------------------------------------------------------------------------------------------------
+---[ Operaciones matemáticas  ]---
 ---------------------------------------------------------------------------------------------------
 
 function Math:set(num)
@@ -721,10 +719,17 @@ function Math:set(num)
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if Math:validate(num) then
-        Math:clear()
-        return
+    self:clear()
+
+    if type(num) == "table" then
+        if not num:validate() then return end
+        for _, value in pairs(num.value) do
+            table.insert(self.value, value)
+        end
+        return GMOD.copy(self.value)
     end
+
+    if type(num) ~= "number" then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -737,7 +742,6 @@ function Math:set(num)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local Num_str = tostring(num)
-    Math:clear()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -797,7 +801,7 @@ function Math:set(num)
     --- Devolver el resultado
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    return self.value
+    return GMOD.copy(self.value)
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -807,20 +811,9 @@ function Math:round(update)
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if not Math:validate(self.value) then return end
-    update = update == nil and false or update
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Variables a usar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local Num = GMOD.copy(self.value)
+    if not self:validate() then return end
+    update = update or false
+    if type(update) ~= "boolean" then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -832,16 +825,11 @@ function Math:round(update)
     --- Si el entero es mayor a 0, eliminar decimal
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if #Num > 3 or Num[3] > 0 then
+    if #self.value > 3 or self.value[3] > 0 then
+        if update then self.value[1] = 0 end
+        local Num = GMOD.copy(self.value)
         table.remove(Num, 1)
         table.remove(Num, 1)
-
-        if update then
-            local Value
-            Value = GMOD.copy(self.value)
-            Value[1] = 0
-            Math:update(Value)
-        end
         return Num
     end
 
@@ -855,8 +843,8 @@ function Math:round(update)
     --- Entero = 0 y decimal > 0 → dejar solo {"1"}
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if Num[1] > 0 then
-        if update then Math:update({ 0, ".", 1 }) end
+    if self.value[1] > 0 then
+        if update then self:set(1) end
         return { 1 }
     end
 
@@ -868,9 +856,13 @@ function Math:add(num)
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if not num.value then return end
-    if not Math:validate(num.value) then return end
-    if not Math:validate(self.value) then return end
+    if type(num) == "number" then
+        local TMP = self:new()
+        TMP:set(num)
+        num = TMP
+    end
+    if type(num) ~= "table" then return end
+    if not num:validate() then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -879,49 +871,23 @@ function Math:add(num)
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Variables a usar
+    --- Sumar cada bloque
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local Carry = 0
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Sumar decimales si existen
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    self.value[1] = self.value[1] + num.value[1]
-    if self.value[1] >= 10000 then
-        self.value[1] = self.value[1] - 10000
-        Carry = 1
+    for i = 1, math.max(#self.value, #num.value) + 1, 1 do
+        if i ~= 2 then
+            local Base = i == 1 and 10000 or 1000
+            local A = self.value[i] or 0
+            local B = num.value[i] or 0
+            local Sum = A + B + Carry
+            Carry = math.floor(Sum / Base)
+            self.value[i] = Sum % Base
+        end
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Sumar enteros
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local X = 3
-    local N = math.max(#self.value, #num.value) + 1
-    while X < N or Carry > 0 do
-        local A = self.value[X] or 0
-        local B = num.value[X] or 0
-
-        local Sum = A + B + Carry
-        Carry = math.floor(Sum / 1000)
-        self.value[X] = Sum % 1000
-
-        X = X + 1
-    end
+    if Carry > 0 then table.insert(self.value, Carry) end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -933,21 +899,18 @@ function Math:add(num)
     --- Devolver el resultado
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    return self.value
+    return GMOD.copy(self.value)
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
----------------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
-
-function Math:mult3(tbl, num)
+function Math:mult(num)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if type(num) ~= "number" then return tbl end
+    if type(num) ~= "number" then return end
+    if not self:validate() then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -956,65 +919,21 @@ function Math:mult3(tbl, num)
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Variables a usar
+    --- Multiplicar cada bloque
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local Result = {}
     local Carry = 0
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Multiplicar el decimal
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    if tbl[2] == "." then
-        local Dec = tbl[1] * num
-        if Dec >= 10000 then
-            Carry = math.floor(Dec / 10000)
-            Dec = Dec % 10000
-        end
-
-        if Dec > 0 then
-            table.insert(Result, Dec)
-            table.insert(Result, ".")
+    for i = 1, #self.value do
+        if i ~= 2 then
+            local Base = i == 1 and 10000 or 1000
+            self.value[i] = self.value[i] * num + Carry
+            Carry = math.floor(self.value[i] / Base)
+            self.value[i] = self.value[i] % Base
         end
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Multiplicar el entero
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    for i = tbl[2] == "." and 3 or 1, #tbl do
-        local N = tbl[i] * num + Carry
-        Carry = math.floor(N / 1000)
-        N = N % 1000
-        table.insert(Result, N)
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Agregar el carry final
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    if Carry > 0 then
-        table.insert(Result, Carry)
-    end
+    if Carry > 0 then table.insert(self.value, Carry) end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1026,21 +945,18 @@ function Math:mult3(tbl, num)
     --- Devolver el resultado
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    self.value = Result
-    self.carry = nil
-    return Result
+    return GMOD.copy(self.value)
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function Math:div3(tbl, num)
+function Math:div(num)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Variables a usar
+    --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local Has_decimal = false
-    local Return = {}
-    local Carry = 0
+    if type(num) ~= "number" then return end
+    if not self:validate() then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1052,16 +968,14 @@ function Math:div3(tbl, num)
     --- Dividir cada bloque
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for i = #tbl, 1, -1 do
-        if tbl[i] == "." then
-            table.insert(Return, 1, ".")
-            Has_decimal = true
-        else
-            local Mult = Has_decimal and 10000 or 1000
-            local Value = Carry * Mult + tbl[i]
+    self.carry = 0
 
-            Carry = Value % num
-            table.insert(Return, 1, math.floor(Value / num))
+    for i = #self.value, 1, -1 do
+        if i ~= 2 then
+            local Base = i == 1 and 10000 or 1000
+            self.value[i] = self.carry * Base + self.value[i]
+            self.carry = self.value[i] % num
+            self.value[i] = math.floor(self.value[i] / num)
         end
     end
 
@@ -1075,21 +989,15 @@ function Math:div3(tbl, num)
     --- Limpiar el resultado
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    while #Return > 1 do
-        local last = Return[#Return]
-        if last == "." then
-            break
-        end
-
-        if last == 0 then
-            table.remove(Return, #Return)
-        else
-            break
-        end
+    while #self.value > 1 do
+        local Last = self.value[#self.value]
+        if Last == "." then break end
+        if Last > 0 then break end
+        table.remove(self.value, #self.value)
     end
 
-    if Return[#Return] == "." then
-        table.insert(Return, 0)
+    if self.value[#self.value] == "." then
+        table.insert(self.value, 0)
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1102,9 +1010,7 @@ function Math:div3(tbl, num)
     --- Devolver el resultado
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    self.value = Return
-    self.carry = Carry
-    return Return, Carry
+    return GMOD.copy(self.value), self.carry
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
