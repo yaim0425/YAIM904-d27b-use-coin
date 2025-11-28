@@ -605,8 +605,8 @@ function Math:new()
     --- Copiar las funciones de la clase
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for k, v in pairs(Math) do
-        New_math[k] = v
+    for key, value in pairs(Math) do
+        New_math[key] = value
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -619,8 +619,7 @@ function Math:new()
     --- Inicializar las variables de la clase
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    New_math.value = nil
-    New_math.carry = nil
+    Math:clear()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
