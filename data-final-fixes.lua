@@ -140,7 +140,7 @@ function This_MOD.reference_values()
     This_MOD.coin_name = This_MOD.prefix .. "coin"
 
     --- Valor minimo
-    This_MOD.decimals = 3
+    This_MOD.decimals = 4
 
     --- Maximo valor de referencia
     This_MOD.value_maximo = nil
@@ -697,7 +697,7 @@ function Math:validate()
         else
             if type(Value) ~= "number" then break end
             if Value < 0 then break end
-            if Index == 1 and Value > 10000 then break end
+            if Index == 1 and Value > 10 ^ This_MOD.decimals then break end
             if Index ~= 1 and Value > 1000 then break end
         end
         Index = Index + 1
@@ -845,11 +845,11 @@ function Math:set(num)
     if Dot then
         local Decimal = Num_str:sub(Dot + 1)
 
-        if #Decimal > 4 then
-            Decimal = Decimal:sub(1, 4)
+        if #Decimal > This_MOD.decimals then
+            Decimal = Decimal:sub(1, This_MOD.decimals)
         end
 
-        while #Decimal < 4 do
+        while #Decimal < This_MOD.decimals do
             Decimal = Decimal .. "0"
         end
 
@@ -918,7 +918,7 @@ function Math:add(num)
 
     for i = 1, math.max(#self.value, #num.value), 1 do
         if i ~= 2 then
-            local Base = i == 1 and 10000 or 1000
+            local Base = i == 1 and 10^This_MOD.decimals or 1000
             local A = self.value[i] or 0
             local B = num.value[i] or 0
             self.value[i] = A + B + Carry
@@ -966,7 +966,7 @@ function Math:mult(num)
 
     for i = 1, #self.value do
         if i ~= 2 then
-            local Base = i == 1 and 10000 or 1000
+            local Base = i == 1 and 10^This_MOD.decimals or 1000
             self.value[i] = self.value[i] * num + Carry
             Carry = math.floor(self.value[i] / Base)
             self.value[i] = self.value[i] % Base
@@ -1012,7 +1012,7 @@ function Math:div(num)
 
     for i = #self.value, 1, -1 do
         if i ~= 2 then
-            local Base = i == 1 and 10000 or 1000
+            local Base = i == 1 and 10^This_MOD.decimals or 1000
             self.value[i] = self.carry * Base + self.value[i]
             self.carry = self.value[i] % num
             self.value[i] = math.floor(self.value[i] / num)
