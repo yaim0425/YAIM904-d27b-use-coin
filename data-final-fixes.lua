@@ -1231,6 +1231,20 @@ function This_MOD.get_elements_to_effect()
     --- Buscar los elements a afectar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
+    for _, recipe in pairs(data.raw.recipe) do
+        repeat
+            if not recipe.ingredients then break end
+            if #recipe.ingredients > 0 then break end
+
+            if not recipe.results then break end
+            if #recipe.results ~= 1 then break end
+
+            if recipe.results[1].type ~= "item" then break end
+
+            This_MOD.ignore_items[recipe.results[1].name] = true
+        until true
+    end
+
     for _, elements in pairs({ GMOD.items, GMOD.fluids }) do
         for _, element in pairs(elements) do
             get_elements(element)
@@ -1324,30 +1338,6 @@ function This_MOD.calculate_coins()
         return Values[name]
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Inicializar los valores en cero
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    for _, recipe in pairs({} or data.raw.recipe) do
-        repeat
-            if not recipe.ingredients then break end
-            if #recipe.ingredients > 0 then break end
-
-            if not recipe.results then break end
-            if #recipe.results ~= 1 then break end
-
-            if recipe.results[1].type ~= "item" then break end
-
-            Values[recipe.results[1].name] = Math:new(0)
-        until true
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1483,7 +1473,7 @@ function This_MOD.create_recipe_to_change_coins()
         Recipe.category = This_MOD.prefix .. space.action
         Recipe.subgroup = "intermediate-product"
         Recipe.order = "z[" .. space.order .. "]"
-        Recipe.enabled = nil
+        Recipe.enabled = true
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
