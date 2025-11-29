@@ -150,11 +150,11 @@ function This_MOD.reference_values()
 
     --- Elementos a ignorar
     This_MOD.ignore_items = {
-        "blueprint",
-        "blueprint-book",
-        "upgrade-planner",
-        "spidertron-remote",
-        "deconstruction-planner"
+        ["blueprint"] = true,
+        ["blueprint-book"] = true,
+        ["upgrade-planner"] = true,
+        ["spidertron-remote"] = true,
+        ["deconstruction-planner"] = true
     }
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -721,9 +721,13 @@ function Math:validate()
 end
 
 function Math:copy()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
     local New_math = self:new()
     New_math:set(self)
     return New_math
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
 function Math:finish()
@@ -918,7 +922,7 @@ function Math:add(num)
 
     for i = 1, math.max(#self.value, #num.value), 1 do
         if i ~= 2 then
-            local Base = i == 1 and 10^This_MOD.decimals or 1000
+            local Base = i == 1 and 10 ^ This_MOD.decimals or 1000
             local A = self.value[i] or 0
             local B = num.value[i] or 0
             self.value[i] = A + B + Carry
@@ -966,7 +970,7 @@ function Math:mult(num)
 
     for i = 1, #self.value do
         if i ~= 2 then
-            local Base = i == 1 and 10^This_MOD.decimals or 1000
+            local Base = i == 1 and 10 ^ This_MOD.decimals or 1000
             self.value[i] = self.value[i] * num + Carry
             Carry = math.floor(self.value[i] / Base)
             self.value[i] = self.value[i] % Base
@@ -1012,7 +1016,7 @@ function Math:div(num)
 
     for i = #self.value, 1, -1 do
         if i ~= 2 then
-            local Base = i == 1 and 10^This_MOD.decimals or 1000
+            local Base = i == 1 and 10 ^ This_MOD.decimals or 1000
             self.value[i] = self.carry * Base + self.value[i]
             self.carry = self.value[i] % num
             self.value[i] = math.floor(self.value[i] / num)
@@ -1153,7 +1157,9 @@ function This_MOD.get_elements_to_effect()
         --- Validación
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
+        --- Elementos a ignorar
         if GMOD.has_id(element.name, "A00A") then return end
+        if This_MOD.ignore_items[element.name] then return end
 
         --- Validar si ya fue procesado
         local That_MOD =
@@ -1327,33 +1333,65 @@ function This_MOD.calculate_coins()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Calcular el valor de los afectados
+    --- Inicializar los valores en cero
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for _, key in pairs(This_MOD.ignore_items) do Values[key] = Math:new(0) end
+    for _, recipe in pairs({} or data.raw.recipe) do
+        repeat
+            if not recipe.ingredients then break end
+            if #recipe.ingredients > 0 then break end
+
+            if not recipe.results then break end
+            if #recipe.results ~= 1 then break end
+
+            if recipe.results[1].type ~= "item" then break end
+
+            Values[recipe.results[1].name] = Math:new(0)
+        until true
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Calcular el valor de los afectados
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     for _, spaces in pairs(This_MOD.to_be_processed) do
         for _, space in pairs(spaces) do
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
+            --- Valor del elemento
             local Value = set_value(space.element.name)
 
             --- Convertir el valor en monedas
             space.coins = {}
             for i, num in pairs(Value:finish()) do
-                space.coins[i] = {
-                    type = "item",
-                    amount = num,
-                    name = This_MOD.coin_name .. "-" .. This_MOD.Units:sub(i, i),
-                    ignored_by_productivity = 0,
-                    ignored_by_stats = num
-                }
+                if num >= 0 then
+                    local Char = This_MOD.Units:sub(i, i)
+                    space.coins[i] = {
+                        type = "item",
+                        amount = num,
+                        name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
+                        ignored_by_productivity = 0,
+                        ignored_by_stats = num
+                    }
+                end
+            end
+
+            --- Eliminar contenedor vacio
+            if #space.coins == 0 then
+                space.coins = nil
             end
 
             --- Guardar el maximo valor a usar
             if not This_MOD.value_maximo then
                 This_MOD.value_maximo = Math:new(0)
             end
+
             if Value:greater_than(This_MOD.value_maximo) then
                 This_MOD.value_maximo = Value
             end
@@ -1532,8 +1570,7 @@ function This_MOD.create_recipe_to_effect(space)
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if not space.value then return end
-    if space.value == 0 then return end
+    if not space.coins then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1627,8 +1664,7 @@ function This_MOD.create_tech_to_effect(space)
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if not space.value then return end
-    if space.value == 0 then return end
+    if not space.coins then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
