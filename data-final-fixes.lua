@@ -143,10 +143,19 @@ function This_MOD.reference_values()
     This_MOD.decimals = 3
 
     --- Maximo valor de referencia
-    This_MOD.value_maximo = { value = 0 }
+    This_MOD.value_maximo = nil
 
     --- Sufijos posibles
-    This_MOD.Units = { "1", "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q", }
+    This_MOD.Units = "1kMGTPEZYRQABCDFHIJLOSUVWX"
+
+    --- Elementos a ignorar
+    This_MOD.ignore_items = {
+        "blueprint",
+        "blueprint-book",
+        "upgrade-planner",
+        "spidertron-remote",
+        "deconstruction-planner"
+    }
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -622,7 +631,7 @@ function Math:new(num)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     New_math:clear()
-    if num then New_math.set(num) end
+    New_math:set(num or 0)
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -707,6 +716,81 @@ function Math:validate()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     return Index > #self.value
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+function Math:copy()
+    local New_math = self:new()
+    New_math:set(self)
+    return New_math
+end
+
+function Math:finish()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if not self:validate() then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Eliminar los ceros innecesarios
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Num = GMOD.copy(self.value)
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Si el entero es mayor a 0, eliminar decimal
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if #self.value > 3 or self.value[3] > 0 then
+        table.remove(Num, 1)
+        table.remove(Num, 1)
+
+        for key, value in pairs(Num) do
+            if value == 0 then
+                Num[key] = nil
+            end
+        end
+
+        return Num
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Entero = 0 y decimal > 0 → dejar solo {"1"}
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if self.value[1] > 0 then return { 1 } end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Valor por defecto
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    return { 0 }
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -807,51 +891,6 @@ function Math:set(num)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function Math:round(update)
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    if not self:validate() then return end
-    update = update or false
-    if type(update) ~= "boolean" then return end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Si el entero es mayor a 0, eliminar decimal
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    if #self.value > 3 or self.value[3] > 0 then
-        if update then self.value[1] = 0 end
-        local Num = GMOD.copy(self.value)
-        table.remove(Num, 1)
-        table.remove(Num, 1)
-        return Num
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Entero = 0 y decimal > 0 → dejar solo {"1"}
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    if self.value[1] > 0 then
-        if update then self:set(1) end
-        return { 1 }
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-end
-
 function Math:add(num)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
@@ -877,14 +916,14 @@ function Math:add(num)
 
     local Carry = 0
 
-    for i = 1, math.max(#self.value, #num.value) + 1, 1 do
+    for i = 1, math.max(#self.value, #num.value), 1 do
         if i ~= 2 then
             local Base = i == 1 and 10000 or 1000
             local A = self.value[i] or 0
             local B = num.value[i] or 0
-            local Sum = A + B + Carry
-            Carry = math.floor(Sum / Base)
-            self.value[i] = Sum % Base
+            self.value[i] = A + B + Carry
+            Carry = math.floor(self.value[i] / Base)
+            self.value[i] = self.value[i] % Base
         end
     end
 
@@ -1012,6 +1051,72 @@ function Math:div(num)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     return GMOD.copy(self.value), self.carry
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+function Math:greater_than(num)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if type(num) == "number" then
+        local TMP = self:new()
+        TMP:set(num)
+        num = TMP
+    end
+    if type(num) ~= "table" then return end
+    if not num:validate() then return end
+    if not self:validate() then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Comparar la longitud
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if #num.value > #self.value then return false end
+    if #num.value < #self.value then return true end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Comparar cada bloque
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Return = false
+
+    for i = 1, math.max(#self.value, #num.value), 1 do
+        if i ~= 2 then
+            local A = num[i] or 0
+            local B = self.value[i] or 0
+            if A > B then break end
+            if A < B then
+                Return = true
+                break
+            end
+        end
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Devolver el resultado
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    return Return
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -1150,7 +1255,11 @@ function This_MOD.calculate_coins()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         --- Evitar bucles
-        if Cache[name] then return 0 end
+        if Cache[name] then
+            local Value = Math:new()
+            Value.name = name
+            return Value
+        end
         Cache[name] = true
 
         --- Valor ya calculado
@@ -1162,46 +1271,46 @@ function This_MOD.calculate_coins()
         --- Item sin receta
         if not GMOD.recipes[name] then
             Cache[name] = nil
-            Values[name] = This_MOD.value_default
+            Values[name] = Math:new(This_MOD.value_default)
             return Values[name]
         end
 
         --- Valor total de la receta
-        Values[name] = This_MOD.value_default
+        Values[name] = Math:new(This_MOD.value_default)
         for _, recipe in pairs(GMOD.recipes[name]) do
             if not GMOD.has_id(recipe.name, This_MOD.id) then
                 --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
                 --- Agregar el tiempo
-                local Value = recipe.energy_required or 0.5
+                local Value = Math:new(recipe.energy_required or 0.5)
 
                 --- Calcular los ingredients
                 if recipe.ingredients and #recipe.ingredients > 0 then
                     for _, ingredient in pairs(recipe.ingredients) do
-                        Value = Value + ingredient.amount * set_value(ingredient.name)
+                        local Ingredient = set_value(ingredient.name):copy()
+                        Ingredient.name = ingredient.name
+                        Ingredient:mult(ingredient.amount)
+                        Value:add(Ingredient)
                     end
                 end
 
                 --- Calcular el valor del objeto
                 for _, result in pairs(recipe.results or {}) do
-                    local amount = result.amount_max or result.amount
+                    local Amount = result.amount_max or result.amount
+                    local Result = Value:copy()
+                    Result:div(Amount)
+                    Result.name = result.name
+                    Result.carry = nil
 
-                    local Coin = Value / amount
-                    Coin = Coin * (10 ^ This_MOD.decimals)
-                    Coin = math.floor(Coin) / (10 ^ This_MOD.decimals)
-
-                    Values[name] = Values[name] or 0
-                    if Coin > 0 and Values[name] < Coin then
-                        Values[name] = Coin
+                    --- Asignar el mayor valor
+                    Values[name] = Values[name] or Math:new()
+                    if Result:greater_than(Values[name]) then
+                        Values[name] = Result
                     end
                 end
 
                 --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
             end
-        end
-
-        if Values[name] > 2 ^ 46 then
-            Values[name] = 2 ^ 46
         end
 
         --- Asignar el menor valor
@@ -1218,98 +1327,35 @@ function This_MOD.calculate_coins()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Convertir el valor deddo en las monedas
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local function split_coins(value)
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Variables a u
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Return = {}
-        local N = #value
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Separar el los valores
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        while N > 0 do
-            local start_pos = math.max(1, N - 2)
-            local Value = tonumber(value:sub(start_pos, N))
-            local Char = This_MOD.Units[#Return + 1]
-            table.insert(Return, {
-                type = "item",
-                amount = Value,
-                name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
-                ignored_by_productivity = 0,
-                ignored_by_stats = Value
-            })
-            N = N - 3
-        end
-
-        --- Elimnar los valores inecesarios
-        local Delete = {}
-        for i, part in pairs(Return) do
-            if part.amount == 0 then
-                table.insert(Delete, 1, i)
-            end
-        end
-        for _, i in pairs(Delete) do
-            table.remove(Return, i)
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Devolver el resultado
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        return Return
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Calcular el valor de los afectados
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for _, key in pairs(This_MOD.ignore_items) do Values[key] = Math:new(0) end
 
     for _, spaces in pairs(This_MOD.to_be_processed) do
         for _, space in pairs(spaces) do
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-            --- Calcular el valor
-            set_value(space.element.name)
-
-            --- Redoncear el valor
-            local Value = Values[space.element.name]
-            space.value = math.floor(Value)
-            if space.value == 0 then
-                space.value = math.ceil(Value)
-            end
+            local Value = set_value(space.element.name)
 
             --- Convertir el valor en monedas
-            space.coins = split_coins(tostring(space.value))
+            space.coins = {}
+            for i, num in pairs(Value:finish()) do
+                space.coins[i] = {
+                    type = "item",
+                    amount = num,
+                    name = This_MOD.coin_name .. "-" .. This_MOD.Units:sub(i, i),
+                    ignored_by_productivity = 0,
+                    ignored_by_stats = num
+                }
+            end
 
             --- Guardar el maximo valor a usar
-            if This_MOD.value_maximo.value < space.value then
-                This_MOD.value_maximo.value = space.value
-                This_MOD.value_maximo.coins = space.coins
+            if not This_MOD.value_maximo then
+                This_MOD.value_maximo = Math:new(0)
+            end
+            if Value:greater_than(This_MOD.value_maximo) then
+                This_MOD.value_maximo = Value
             end
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1336,8 +1382,9 @@ function This_MOD.create_coins()
     --- Crear el item
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for N, _ in pairs(This_MOD.value_maximo.coins) do
-        local Char = This_MOD.Units[N]
+    This_MOD.value_maximo.coins = This_MOD.value_maximo:finish()
+    for i = 1, #This_MOD.value_maximo.coins, 1 do
+        local Char = This_MOD.Units:sub(i, i)
 
         GMOD.extend({
             type = "item",
@@ -1352,7 +1399,7 @@ function This_MOD.create_coins()
                 scale = 0.25
             } },
             subgroup = "intermediate-product",
-            order = "z[" .. N .. "]",
+            order = "z[" .. GMOD.pad_left_zeros(2, i) .. "]",
             stack_size = 1000
         })
     end
@@ -1457,8 +1504,8 @@ function This_MOD.create_recipe_to_change_coins()
                 order = N .. (value == This_MOD.actions.sell and 0 or 1),
                 value = value,
                 action = action,
-                char_up = This_MOD.Units[N],
-                char_down = This_MOD.Units[N - 1]
+                char_up = This_MOD.Units:sub(N, N),
+                char_down = This_MOD.Units:sub(N - 1, N - 1)
             })
         end
     end
