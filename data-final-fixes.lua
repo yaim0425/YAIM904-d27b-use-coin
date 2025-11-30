@@ -146,7 +146,7 @@ function This_MOD.reference_values()
     This_MOD.value_maximo = nil
 
     --- Sufijos posibles
-    This_MOD.Units = "1kMGTPEZYRQABCDFHIJLOSUVWX"
+    This_MOD.Units = "1kMGTPEZY"
 
     --- Elementos a ignorar
     This_MOD.ignore_items = {
@@ -1361,7 +1361,7 @@ function This_MOD.calculate_coins()
             space.coins = {}
             for i, num in pairs(Value:finish()) do
                 if num >= 0 then
-                    local Char = This_MOD.Units:sub(i, i)
+                    local Char = i > #This_MOD.Units and tostring(i) or This_MOD.Units:sub(i, i)
                     table.insert(space.coins, {
                         type = "item",
                         amount = num,
@@ -1413,24 +1413,58 @@ function This_MOD.create_coins()
 
     This_MOD.value_maximo.coins = This_MOD.value_maximo:finish()
     for i = 1, #This_MOD.value_maximo.coins, 1 do
-        local Char = This_MOD.Units:sub(i, i)
+        --- Prefijo
+        local Char = i > #This_MOD.Units and tostring(i) or This_MOD.Units:sub(i, i)
 
-        GMOD.extend({
+        --- item
+        local Coin = {
             type = "item",
             name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
             localised_name = { "", { "item-name.coin" } },
-            icons = { {
-                icon = "__base__/graphics/icons/coin.png",
-                icon_size = 64
-            }, {
-                icon = GMOD.signal[string.upper(Char)],
-                shift = { 8, -8 },
-                scale = 0.25
-            } },
             subgroup = "intermediate-product",
             order = "z[" .. GMOD.pad_left_zeros(2, i) .. "]",
             stack_size = 1000
-        })
+        }
+
+        Coin.icons = (function()
+            --- Contenedor de salida
+            local Icons = {}
+
+            --- Imagen de la moneda
+            table.insert(Icons, {
+                icon = "__base__/graphics/icons/coin.png",
+                icon_size = 64
+            })
+
+            --- Agregar el prefijo
+            if i <= #This_MOD.Units then
+                table.insert(Icons, {
+                    icon = GMOD.signal[string.upper(Char)],
+                    shift = { 8, -8 },
+                    scale = 0.25
+                })
+
+                --- Devolver el resultado
+                return Icons
+            end
+
+            --- Agregar los numeros
+            table.insert(Icons, {
+                icon = GMOD.signal[Char:sub(1, 1)],
+                shift = { -8, -8 },
+                scale = 0.25
+            })
+            table.insert(Icons, {
+                icon = GMOD.signal[Char:sub(2, 2)],
+                shift = { 8, -8 },
+                scale = 0.25
+            })
+
+            --- Devolver el resultado
+            return Icons
+        end)()
+
+        GMOD.extend(Coin)
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1533,8 +1567,8 @@ function This_MOD.create_recipe_to_change_coins()
                 order = N .. (value == This_MOD.actions.sell and 0 or 1),
                 value = value,
                 action = action,
-                char_up = This_MOD.Units:sub(N, N),
-                char_down = This_MOD.Units:sub(N - 1, N - 1)
+                char_up = N > #This_MOD.Units and tostring(N) or This_MOD.Units:sub(N, N),
+                char_down = N - 1 > #This_MOD.Units and tostring(N - 1) or This_MOD.Units:sub(N - 1, N - 1)
             })
         end
     end
