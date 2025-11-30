@@ -1361,11 +1361,10 @@ function This_MOD.calculate_coins()
             space.coins = {}
             for i, num in pairs(Value:finish()) do
                 if num >= 0 then
-                    local Char = i > #This_MOD.Units and tostring(i) or This_MOD.Units:sub(i, i)
                     table.insert(space.coins, {
                         type = "item",
                         amount = num,
-                        name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
+                        name = This_MOD.coin_name .. "-" .. i,
                         ignored_by_productivity = 0,
                         ignored_by_stats = num
                     })
@@ -1399,7 +1398,7 @@ function This_MOD.create_coins()
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if GMOD.items[This_MOD.coin_name] then return end
+    if GMOD.items[This_MOD.coin_name .. "-1"] then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1419,7 +1418,7 @@ function This_MOD.create_coins()
         --- item
         local Coin = {
             type = "item",
-            name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
+            name = This_MOD.coin_name .. "-" .. i,
             localised_name = { "", { "item-name.coin" } },
             subgroup = "intermediate-product",
             order = "z[" .. GMOD.pad_left_zeros(2, i) .. "]",
@@ -1498,10 +1497,9 @@ function This_MOD.create_recipe_to_change_coins()
 
         local Name =
             GMOD.name .. That_MOD.ids ..
-            This_MOD.id .. "-" ..
             space.action .. "-" ..
-            That_MOD.name ..
-            (space.char_up ~= "1" and "-" .. space.char_up or "")
+            That_MOD.name .. "-" ..
+            space.char_up
 
         Recipe.name = Name
         Recipe.localised_name = { "", { "item-name.coin" } }
@@ -1523,7 +1521,7 @@ function This_MOD.create_recipe_to_change_coins()
         Recipe[space.value[1]] = { {
             type = "item",
             amount = 1,
-            name = This_MOD.coin_name .. (space.char_up ~= "1" and "-" .. space.char_up or ""),
+            name = This_MOD.coin_name .. "-" .. space.char_up,
             ignored_by_productivity = 0,
             ignored_by_stats = 1
         } }
@@ -1531,7 +1529,7 @@ function This_MOD.create_recipe_to_change_coins()
         Recipe[space.value[2]] = { {
             type = "item",
             amount = 1000,
-            name = This_MOD.coin_name .. (space.char_down ~= "1" and "-" .. space.char_down or ""),
+            name = This_MOD.coin_name .. "-" .. space.char_down,
             ignored_by_productivity = 0,
             ignored_by_stats = 1000
         } }
@@ -1564,11 +1562,11 @@ function This_MOD.create_recipe_to_change_coins()
     for N = 2, #This_MOD.value_maximo.coins, 1 do
         for action, value in pairs(This_MOD.actions) do
             recipes_to_coins({
-                order = N .. (value == This_MOD.actions.sell and 0 or 1),
+                order = GMOD.pad_left_zeros(3, N) .. (value == This_MOD.actions.sell and 0 or 1),
                 value = value,
                 action = action,
-                char_up = N > #This_MOD.Units and tostring(N) or This_MOD.Units:sub(N, N),
-                char_down = N - 1 > #This_MOD.Units and tostring(N - 1) or This_MOD.Units:sub(N - 1, N - 1)
+                char_up = N,
+                char_down = N - 1
             })
         end
     end
@@ -1620,7 +1618,7 @@ function This_MOD.create_recipe_to_effect(space)
         if value == This_MOD.actions.sell then
             Recipe.localised_name = { "item-name.coin" }
             table.insert(Recipe.icons, {
-                icon = GMOD.items[This_MOD.coin_name].icons[1].icon,
+                icon = GMOD.items[This_MOD.coin_name .. "-1"].icons[1].icon,
                 scale =
                     GMOD.has_id(space.element.name, GMOD.d01b.id) and
                     0.35 or 0.25,
