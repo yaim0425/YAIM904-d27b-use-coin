@@ -1362,13 +1362,13 @@ function This_MOD.calculate_coins()
             for i, num in pairs(Value:finish()) do
                 if num >= 0 then
                     local Char = This_MOD.Units:sub(i, i)
-                    space.coins[i] = {
+                    table.insert(space.coins, {
                         type = "item",
                         amount = num,
                         name = This_MOD.coin_name .. (Char ~= "1" and "-" .. Char or ""),
                         ignored_by_productivity = 0,
                         ignored_by_stats = num
-                    }
+                    })
                 end
             end
 
@@ -1382,6 +1382,7 @@ function This_MOD.calculate_coins()
                 This_MOD.value_maximo = Math:new(0)
             end
 
+            --- Referencia del numero más grande
             if Value:greater_than(This_MOD.value_maximo) then
                 This_MOD.value_maximo = Value
             end
@@ -1640,7 +1641,9 @@ function This_MOD.create_recipe_to_effect(space)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Crear el prototipo
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
+        -- if Recipe.name == "YAIM0425-d27b-sell-productivity-module-7" then
+        --     GMOD.var_dump(Recipe)
+        -- end
         GMOD.extend(Recipe)
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
