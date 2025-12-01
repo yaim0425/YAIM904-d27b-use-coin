@@ -74,6 +74,9 @@ function This_MOD.reference_values()
     --- Contenedor de los elementos que el MOD modoficará
     This_MOD.to_be_processed = {}
 
+    --- Maximo valor de referencia
+    This_MOD.value_maximo = nil
+
     --- Validar si se cargó antes
     if This_MOD.setting then return end
 
@@ -141,9 +144,6 @@ function This_MOD.reference_values()
 
     --- Valor minimo
     This_MOD.decimals = 4
-
-    --- Maximo valor de referencia
-    This_MOD.value_maximo = nil
 
     --- Sufijos posibles
     This_MOD.Units = "1kMGTPEZY"
@@ -1160,6 +1160,7 @@ function This_MOD.get_elements_to_effect()
         --- Elementos a ignorar
         if GMOD.has_id(element.name, "A00A") then return end
         if This_MOD.ignore_items[element.name] then return end
+        if element.type ~= "fluid" and not element.subgroup then return end
 
         --- Validar si ya fue procesado
         local That_MOD =
@@ -1395,81 +1396,84 @@ end
 
 function This_MOD.create_coins()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if GMOD.items[This_MOD.coin_name .. "-1"] then return end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Crear el item
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
+    if not This_MOD.value_maximo then return end
     This_MOD.value_maximo.coins = This_MOD.value_maximo:finish()
     for i = 1, #This_MOD.value_maximo.coins, 1 do
-        --- Prefijo
-        local Char = i > #This_MOD.Units and tostring(i) or This_MOD.Units:sub(i, i)
+        if not GMOD.items[This_MOD.coin_name .. "-" .. i] then
+            --- Prefijo
+            local Char = i > #This_MOD.Units and tostring(i) or This_MOD.Units:sub(i, i)
 
-        --- item
-        local Coin = {
-            type = "item",
-            name = This_MOD.coin_name .. "-" .. i,
-            localised_name = { "", { "item-name.coin" } },
-            subgroup = "intermediate-product",
-            order = "z[" .. GMOD.pad_left_zeros(2, i) .. "]",
-            stack_size = 1000
-        }
+            --- item
+            local Coin = {
+                type = "item",
+                name = This_MOD.coin_name .. "-" .. i,
+                localised_name = { "", { "item-name.coin" } },
+                subgroup = "intermediate-product",
+                order = "z[" .. GMOD.pad_left_zeros(2, i) .. "]",
+                stack_size = 1000
+            }
 
-        Coin.icons = (function()
-            --- Contenedor de salida
-            local Icons = {}
+            --- Icon
+            Coin.icons = (function()
+                --- Contenedor de salida
+                local Icons = {}
 
-            --- Imagen de la moneda
-            table.insert(Icons, {
-                icon = "__base__/graphics/icons/coin.png",
-                icon_size = 64
-            })
-
-            --- Agregar el prefijo
-            if i <= #This_MOD.Units then
+                --- Imagen de la moneda
                 table.insert(Icons, {
-                    icon = GMOD.signal[string.upper(Char)],
+                    icon = "__base__/graphics/icons/coin.png",
+                    icon_size = 64
+                })
+
+                --- Agregar el prefijo
+                if i <= #This_MOD.Units then
+                    table.insert(Icons, {
+                        icon = GMOD.signal[string.upper(Char)],
+                        shift = { 8, -8 },
+                        scale = 0.25
+                    })
+
+                    --- Devolver el resultado
+                    return Icons
+                end
+
+                --- Agregar los numeros
+                table.insert(Icons, {
+                    icon = GMOD.signal[Char:sub(1, 1)],
+                    shift = { -8, -8 },
+                    scale = 0.25
+                })
+                table.insert(Icons, {
+                    icon = GMOD.signal[Char:sub(2, 2)],
                     shift = { 8, -8 },
                     scale = 0.25
                 })
 
                 --- Devolver el resultado
                 return Icons
-            end
+            end)()
 
-            --- Agregar los numeros
-            table.insert(Icons, {
-                icon = GMOD.signal[Char:sub(1, 1)],
-                shift = { -8, -8 },
-                scale = 0.25
-            })
-            table.insert(Icons, {
-                icon = GMOD.signal[Char:sub(2, 2)],
-                shift = { 8, -8 },
-                scale = 0.25
-            })
-
-            --- Devolver el resultado
-            return Icons
-        end)()
-
-        GMOD.extend(Coin)
+            --- Crear prototipo
+            GMOD.extend(Coin)
+        end
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
 function This_MOD.create_recipe_to_change_coins()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if not This_MOD.value_maximo then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Recetas para intercambiar las monedas
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1500,6 +1504,8 @@ function This_MOD.create_recipe_to_change_coins()
             space.action .. "-" ..
             That_MOD.name .. "-" ..
             space.char_up
+
+        if data.raw.recipe[Name] then return end
 
         Recipe.name = Name
         Recipe.localised_name = { "", { "item-name.coin" } }
@@ -1580,7 +1586,7 @@ function This_MOD.create_recipe_categories()
     local Category = GMOD.entities[This_MOD.new_entity_name].crafting_categories
     for action, _ in pairs(This_MOD.actions) do
         local Name = This_MOD.prefix .. action
-        if GMOD.get_key(Category, Name) then break end
+        if GMOD.get_key(Category, Name) then return end
         GMOD.extend({ type = "recipe-category", name = Name })
         table.insert(Category, Name)
     end
