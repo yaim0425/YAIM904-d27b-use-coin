@@ -125,7 +125,7 @@ function This_MOD.reference_values()
         localised_name = {},
         localised_description = { "" },
         energy_required = 1,
-        enabled = false,
+        enabled = true,
 
         hide_from_player_crafting = true,
         hidden_in_factoriopedia = true,
@@ -1360,20 +1360,33 @@ function This_MOD.calculate_coins()
 
             --- Convertir el valor en monedas
             space.coins = {}
-            for i, num in pairs(Value:finish()) do
-                if num >= 0 then
-                    table.insert(space.coins, {
-                        type = "item",
-                        amount = num,
-                        name = This_MOD.coin_name .. "-" .. i,
-                        ignored_by_productivity = 0,
-                        ignored_by_stats = num
-                    })
+            for action, value in pairs(This_MOD.actions) do
+                --- Contenedor de salida
+                space.coins[action] = {}
+
+                --- Convertir en el formato
+                local Coins = Value:copy()
+                if This_MOD.actions.sell == value then Coins:div(2) end
+                for i, num in pairs(Coins:finish()) do
+                    if num >= 0 then
+                        table.insert(space.coins[action], {
+                            type = "item",
+                            amount = num,
+                            name = This_MOD.coin_name .. "-" .. i,
+                            ignored_by_productivity = 0,
+                            ignored_by_stats = num
+                        })
+                    end
+                end
+
+                --- Eliminar contenedor vacio
+                if #space.coins[action] == 0 then
+                    space.coins[action] = nil
                 end
             end
 
             --- Eliminar contenedor vacio
-            if #space.coins == 0 then
+            if not GMOD.get_length(space.coins) then
                 space.coins = nil
             end
 
@@ -1608,10 +1621,26 @@ function This_MOD.create_recipe_to_effect(space)
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Crear la recipes
+    --- Crear la recipe
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for action, value in pairs(This_MOD.actions) do
+    local function create_recipe(action, value)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validación
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        if not space.coins[action] then return end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Crear la receta
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
         local Recipe = GMOD.copy(This_MOD.recipe_base)
 
         Recipe.name = space[action]
@@ -1626,7 +1655,7 @@ function This_MOD.create_recipe_to_effect(space)
             table.insert(Recipe.icons, {
                 icon = GMOD.items[This_MOD.coin_name .. "-1"].icons[1].icon,
                 scale =
-                    GMOD.has_id(space.element.name, GMOD.d01b.id) and
+                    (GMOD.d01b and GMOD.has_id(space.element.name, GMOD.d01b.id)) and
                     0.35 or 0.25,
                 icon_size = 64,
                 shift = { 14, 14 }
@@ -1646,7 +1675,7 @@ function This_MOD.create_recipe_to_effect(space)
             ignored_by_stats = 1
         } }
 
-        Recipe[value[2]] = space.coins
+        Recipe[value[2]] = space.coins[action]
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1679,12 +1708,24 @@ function This_MOD.create_recipe_to_effect(space)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Crear el prototipo
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        -- if Recipe.name == "YAIM0425-d27b-sell-productivity-module-7" then
-        --     GMOD.var_dump(Recipe)
-        -- end
+
         GMOD.extend(Recipe)
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear las recipes
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for action, value in pairs(This_MOD.actions) do
+        create_recipe(action, value)
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
