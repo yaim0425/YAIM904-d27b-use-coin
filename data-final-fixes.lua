@@ -125,7 +125,7 @@ function This_MOD.reference_values()
         localised_name = {},
         localised_description = { "" },
         energy_required = 1,
-        enabled = true,
+        enabled = false,
 
         hide_from_player_crafting = true,
         hidden_in_factoriopedia = true,
