@@ -1145,6 +1145,18 @@ end
 
 function This_MOD.get_value_zero()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Variables a usar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Levels, Recipes = {}, {}
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Mierales a afectar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1279,8 +1291,7 @@ function This_MOD.get_value_zero()
             for _, result in pairs(recipe.results or {}) do
                 if result.type == "item" then
                     All_items[result.name] = nil
-                end
-                if result.type == "fluid" then
+                elseif result.type == "fluid" then
                     if type(All_items[result.name]) == "table" then
                         local Temperatures = All_items[result.name]
                         if result.maximum_temperature then
@@ -1291,13 +1302,29 @@ function This_MOD.get_value_zero()
                         if not GMOD.get_length(Temperatures) then
                             All_items[result.name] = nil
                         end
-                    end
-
-                    if type(All_items[result.name]) == "boolean" then
+                    elseif type(All_items[result.name]) == "boolean" then
                         All_items[result.name] = nil
                     end
                 end
             end
+            for _, ingredient in pairs(recipe.ingredients or {}) do
+                Recipes[ingredient.name] = Recipes[ingredient.name] or {}
+                table.insert(Recipes[ingredient.name], recipe)
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Guardar el resultado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for key, value in pairs(All_items) do
+            This_MOD.zero[key] = value
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1318,6 +1345,7 @@ function This_MOD.get_value_zero()
     get_resource()
     get_fluids()
     get_items_without_recipes()
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
