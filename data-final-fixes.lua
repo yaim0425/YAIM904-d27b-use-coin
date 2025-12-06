@@ -1266,6 +1266,41 @@ function This_MOD.get_value_zero()
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Eliminar los objetos con recetas
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, recipe in pairs(data.raw.recipe) do
+            for _, result in pairs(recipe.results or {}) do
+                if result.type == "item" then
+                    All_items[result.name] = nil
+                end
+                if result.type == "fluid" then
+                    if type(All_items[result.name]) == "table" then
+                        local Temperatures = All_items[result.name]
+                        if result.maximum_temperature then
+                            Temperatures[result.maximum_temperature] = nil
+                        elseif result.temperature then
+                            Temperatures[result.temperature] = nil
+                        end
+                        if not GMOD.get_length(Temperatures) then
+                            All_items[result.name] = nil
+                        end
+                    end
+
+                    if type(All_items[result.name]) == "boolean" then
+                        All_items[result.name] = nil
+                    end
+                end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
