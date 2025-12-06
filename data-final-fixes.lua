@@ -39,6 +39,14 @@ function This_MOD.start()
         end
     end
 
+    This_MOD.get_value_zero()
+
+
+
+
+
+
+
     --- Recetas de conversión
     This_MOD.get_elements_to_effect()
     This_MOD.calculate_coins()
@@ -1124,6 +1132,141 @@ function Math:greater_than(num)
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
+
+---------------------------------------------------------------------------------------------------
+
+
+
+
+
+---------------------------------------------------------------------------------------------------
+---[ Nuevo metodo ]---
+---------------------------------------------------------------------------------------------------
+
+function This_MOD.get_value_zero()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Mierales a afectar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function get_resource()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Objectos minables
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, element in pairs(data.raw.resource) do
+            if element.minable then
+                for _, result in pairs(element.minable.results or {}) do
+                    repeat
+                        if result.type ~= "item" then break end
+                        if not GMOD.items[result.name] then break end
+                        This_MOD.zero[result.name] = false
+                    until true
+                end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Fluidos a afectar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function get_fluids()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validar el fluido
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local function validate(element)
+            if element.type ~= "fluid" then return end
+
+            local Temperatures = This_MOD.zero[element.name] or {}
+            This_MOD.zero[element.name] = Temperatures
+
+            if element.maximum_temperature then
+                Temperatures[element.maximum_temperature] = true
+            elseif element.temperature then
+                Temperatures[element.temperature] = true
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Obtener los fluidos
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Fluidos tomados del suelo
+        for _, tile in pairs(data.raw.tile) do
+            if tile.fluid then
+                This_MOD.zero[tile.fluid] = {}
+            end
+        end
+
+        --- Fluidos minables
+        for _, resource in pairs(data.raw.resource) do
+            if resource.minable then
+                for _, result in pairs(resource.minable.results or {}) do
+                    validate(result)
+                end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Dar el formato deseado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for fluid_name, temperatures in pairs(This_MOD.zero) do
+            if not GMOD.get_length(temperatures) then
+                This_MOD.zero[fluid_name] = false
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Valores a afectar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Mierales a afectar
+    This_MOD.zero = {}
+    get_resource()
+    get_fluids()
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    GMOD.var_dump(This_MOD.zero)
+    ERROR()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+
 
 ---------------------------------------------------------------------------------------------------
 
