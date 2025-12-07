@@ -39,7 +39,7 @@ function This_MOD.start()
         end
     end
 
-    This_MOD.get_value_zero()
+    This_MOD.set_value_zero()
 
 
 
@@ -1143,12 +1143,12 @@ end
 ---[ Nuevo metodo ]---
 ---------------------------------------------------------------------------------------------------
 
-function This_MOD.get_value_zero()
+function This_MOD.set_value_zero()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Variables a usar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local Levels, Recipes = {}, {}
+    local Levels, Recipes, Less = {}, {}, {}
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1157,7 +1157,7 @@ function This_MOD.get_value_zero()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Mierales a afectar
+    --- Elementos del nivel cero
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local function get_resource()
@@ -1171,7 +1171,9 @@ function This_MOD.get_value_zero()
                     repeat
                         if result.type ~= "item" then break end
                         if not GMOD.items[result.name] then break end
-                        This_MOD.zero[result.name] = false
+                        Levels[result.name] = { results = { { name = result.name } } }
+                        This_MOD.levels[1][result.name] = Levels[result.name]
+                        table.insert(Less, Levels[result.name])
                     until true
                 end
             end
@@ -1180,17 +1182,19 @@ function This_MOD.get_value_zero()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Fluidos a afectar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
     local function get_fluids()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Variable de salida
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Return = {}
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Validar el fluido
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1198,8 +1202,8 @@ function This_MOD.get_value_zero()
         local function validate(element)
             if element.type ~= "fluid" then return end
 
-            local Temperatures = This_MOD.zero[element.name] or {}
-            This_MOD.zero[element.name] = Temperatures
+            local Temperatures = Return[element.name] or {}
+            Return[element.name] = Temperatures
 
             if element.maximum_temperature then
                 Temperatures[element.maximum_temperature] = true
@@ -1221,7 +1225,7 @@ function This_MOD.get_value_zero()
         --- Fluidos tomados del suelo
         for _, tile in pairs(data.raw.tile) do
             if tile.fluid then
-                This_MOD.zero[tile.fluid] = {}
+                Return[tile.fluid] = {}
             end
         end
 
@@ -1244,35 +1248,46 @@ function This_MOD.get_value_zero()
         --- Dar el formato deseado
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        for fluid_name, temperatures in pairs(This_MOD.zero) do
+        for name, temperatures in pairs(Return) do
             if not GMOD.get_length(temperatures) then
-                This_MOD.zero[fluid_name] = false
+                Levels[name] = { results = { { name = name } } }
+                This_MOD.levels[1][name] = Levels[name]
+                table.insert(Less, Levels[name])
+            else
+                This_MOD.levels[1][name] = This_MOD.levels[1][name] or {}
+                for temperature, _ in pairs(temperatures) do
+                    local Name = name .. "|" .. temperature
+                    Levels[Name] = { results = { { name = name, temperature = temperature } } }
+                    This_MOD.levels[1][Name] = Levels[Name]
+                    table.insert(Less, Levels[Name])
+                end
             end
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Valores a afectar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
     local function get_items_without_recipes()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Variables a usar
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local All_elements = {}
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Cargar los objetos existentes
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        local All_items = {}
         for _, elements in pairs(data.raw) do
             for _, element in pairs(elements) do
                 if element.stack_size then
-                    All_items[element.name] = false
+                    All_elements[element.name] = true
                 end
             end
         end
@@ -1288,28 +1303,24 @@ function This_MOD.get_value_zero()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         for _, recipe in pairs(data.raw.recipe) do
+            --- Eliminar objetos con recetas
             for _, result in pairs(recipe.results or {}) do
                 if result.type == "item" then
-                    All_items[result.name] = nil
-                elseif result.type == "fluid" then
-                    if type(All_items[result.name]) == "table" then
-                        local Temperatures = All_items[result.name]
-                        if result.maximum_temperature then
-                            Temperatures[result.maximum_temperature] = nil
-                        elseif result.temperature then
-                            Temperatures[result.temperature] = nil
-                        end
-                        if not GMOD.get_length(Temperatures) then
-                            All_items[result.name] = nil
-                        end
-                    elseif type(All_items[result.name]) == "boolean" then
-                        All_items[result.name] = nil
-                    end
+                    All_elements[result.name] = nil
                 end
             end
+
+            --- Enlistar los ingredientes
             for _, ingredient in pairs(recipe.ingredients or {}) do
                 Recipes[ingredient.name] = Recipes[ingredient.name] or {}
-                table.insert(Recipes[ingredient.name], recipe)
+                if ingredient.type == "item" then
+                    table.insert(Recipes[ingredient.name], recipe)
+                elseif ingredient.type == "fluid" then
+                    local Fluid = data.raw.fluid[ingredient.name]
+                    local Temperature = ingredient.temperature or Fluid.default_temperature
+                    Recipes[ingredient.name][Temperature] = Recipes[ingredient.name][Temperature] or {}
+                    table.insert(Recipes[ingredient.name][Temperature], recipe)
+                end
             end
         end
 
@@ -1323,9 +1334,101 @@ function This_MOD.get_value_zero()
         --- Guardar el resultado
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        for key, value in pairs(All_items) do
-            This_MOD.zero[key] = value
+        for name, _ in pairs(All_elements) do
+            Levels[name] = { results = { { name = name } } }
+            This_MOD.levels[1][name] = Levels[name]
+            table.insert(Less, Levels[name])
         end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function validate_ingredients(ingredients)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, ingredient in pairs(ingredients or {}) do
+            if not Levels[ingredient.name] then
+                return
+            end
+        end
+
+        return true
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function validate_recipes(recipes)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validación
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        if not recipes then return end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Revisar cada recetas
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Remove = {}
+
+        for key, recipe in pairs(recipes) do
+            if validate_ingredients(recipe.ingredients) then
+                for _, result in pairs(recipe.results or {}) do
+                    if result.maximum_temperature then
+                        This_MOD.levels[#This_MOD.levels][result.name .. "|" .. result.maximum_temperature] = recipe
+                        if not Levels[result.name .. "|" .. result.maximum_temperature] then
+                            Levels[result.name .. "|" .. result.maximum_temperature] = #This_MOD.levels
+                        end
+                        table.insert(Remove, 1, key)
+                    elseif result.temperature then
+                        This_MOD.levels[#This_MOD.levels][result.name .. "|" .. result.temperature] = recipe
+                        if not Levels[result.name .. "|" .. result.temperature] then
+                            Levels[result.name .. "|" .. result.temperature] = #This_MOD.levels
+                        end
+                        table.insert(Remove, 1, key)
+                    else
+                        This_MOD.levels[#This_MOD.levels][result.name] = recipe
+                        if not Levels[result.name] then
+                            Levels[result.name] = #This_MOD.levels
+                        end
+                        table.insert(Remove, 1, key)
+                    end
+                end
+            end
+        end
+
+        for _, key in pairs(Remove) do
+            table.remove(recipes, key)
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function create_levels()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        -- while #Less > 0 do
+        --     local N = #This_MOD.levels
+        --     table.insert(This_MOD.levels, {})
+        --     for _, recipe in pairs(This_MOD.levels[N]) do
+        --         for _, result in pairs(recipe.results or {}) do
+        --             validate_recipes(Recipes[result.name])
+        --             if not GMOD.get_length(Recipes[result.name]) then
+        --                 Recipes[result.name] = nil
+        --             end
+        --         end
+        --     end
+        --     if N > 100 then break end
+        -- end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
@@ -1340,21 +1443,37 @@ function This_MOD.get_value_zero()
     --- Valores a afectar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    --- Mierales a afectar
-    This_MOD.zero = {}
+    --- Inicializar los contenedores
+    This_MOD.levels = { [1] = {} }
+
+    --- Elementos del nivel cero
     get_resource()
     get_fluids()
     get_items_without_recipes()
+    create_levels()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    GMOD.var_dump(This_MOD.zero)
+    GMOD.var_dump(Recipes)
+    GMOD.var_dump(This_MOD.levels)
+    GMOD.var_dump(Levels)
     ERROR()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
+
+---------------------------------------------------------------------------------------------------
+
+local xXx = {
+    name = "",
+    level = 0,
+    recipe = {},
+    results = {},
+    ingredients = {},
+    value = Math:new(),
+}
 
 ---------------------------------------------------------------------------------------------------
 
