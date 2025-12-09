@@ -1354,7 +1354,15 @@ function This_MOD.set_value_zero()
             end
 
             --- Enlistar las recetas
-            Recipes[recipe.name] = recipe
+            if
+                recipe.ingredients and
+                recipe.results and (
+                    #recipe.ingredients > 0 or
+                    #recipe.results > 0
+                )
+            then
+                Recipes[recipe.name] = recipe
+            end
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1436,180 +1444,106 @@ function This_MOD.set_value_zero()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    local function validate_recipes(name, temperature)
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Validación
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        if temperature then name = name .. "|" .. temperature end
-        if not Recipes[name] then return end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Revisar cada recetas
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Remove = {}
-        local Level = This_MOD.levels[#This_MOD.levels]
-
-        for _, recipe in pairs(Recipes[name]) do
-            if validate_ingredients(recipe.ingredients) then
-                for _, result in pairs(recipe.results or {}) do
-                    if result.maximum_temperature then
-                        table.insert(Remove, recipe)
-                        if recipe.name then
-                            Level[recipe.name] = recipe
-                        end
-
-                        local Name = result.name .. "|" .. result.maximum_temperature
-                        if not Levels[Name] then
-                            Levels[Name] = #This_MOD.levels
-                            Levels[result.name] = #This_MOD.levels
-                        end
-                    elseif result.temperature then
-                        table.insert(Remove, recipe)
-                        if recipe.name then
-                            Level[recipe.name] = recipe
-                        end
-
-                        local Name = result.name .. "|" .. result.temperature
-                        if not Levels[Name] then
-                            Levels[Name] = #This_MOD.levels
-                            Levels[result.name] = #This_MOD.levels
-                        end
-                    else
-                        table.insert(Remove, recipe)
-                        if recipe.name then
-                            Level[recipe.name] = recipe
-                        end
-
-                        local Name = result.name
-                        if not Levels[Name] then
-                            Levels[Name] = #This_MOD.levels
-                        end
-                    end
-                end
-            end
-        end
-
-        for _, recipe in pairs(Remove) do
-            for _, ingredient in pairs(recipe.ingredients or {}) do
-                repeat
-                    local N = GMOD.get_key(Recipes[ingredient.name], recipe)
-                    if not N then break end
-                    table.remove(Recipes[ingredient.name], N)
-                    if GMOD.get_length(Recipes[ingredient.name]) then break end
-                    Recipes[ingredient.name] = nil
-                until true
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
     local function create_levels()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         while GMOD.get_length(Recipes) do
-            table.insert(This_MOD.levels, {})
-            for key, level in pairs(This_MOD.levels) do
-                if key == #This_MOD.levels then break end
-                for _, recipe in pairs(level) do
-                    for _, result in pairs(recipe.results or {}) do
-                        validate_recipes(result.name, result.temperature or result.maximum_temperature)
+            --- Recorrer las recetas
+            while GMOD.get_length(Recipes) do
+                local Level = {}
+                table.insert(This_MOD.levels, Level)
+
+                for key, Recipe in pairs(Recipes) do
+                    if validate_ingredients(Recipe.ingredients) then
+                        for _, result in pairs(Recipe.results or {}) do
+                            local Name = result.name
+                            if result.maximum_temperature then
+                                if not Levels[Name] then Levels[Name] = #This_MOD.levels end
+                                Name = Name .. "|" .. result.maximum_temperature
+                            elseif result.temperature then
+                                if not Levels[Name] then Levels[Name] = #This_MOD.levels end
+                                Name = Name .. "|" .. result.temperature
+                            end
+
+                            if not Levels[Name] then
+                                Levels[Name] = {
+                                    name = Name,
+                                    level = #This_MOD.levels,
+                                    value = Math:new(),
+                                    ignored = Recipe.ignored,
+
+                                    recipe = Recipe,
+                                    results = Recipe.results,
+                                    ingredients = result.ingredients,
+                                }
+                                Levels[Name] = #This_MOD.levels
+                            end
+
+                            Recipes[key] = nil
+                            if not Recipe.ignored then
+                                Level[Recipe.name] = Recipe
+                            end
+                        end
                     end
+                end
+
+                if not GMOD.get_length(Level) then
+                    table.remove(This_MOD.levels, #This_MOD.levels)
+                    break
                 end
             end
 
-            if not GMOD.get_length(This_MOD.levels[#This_MOD.levels]) then
-                GMOD.var_dump("FORCE", #This_MOD.levels - 1)
-                break
+            --- Procesar las recetas sin evaluar
+            local Values = {}
+            for _, Recipe in pairs(Recipes) do
+                Values[Recipe.name] = Values[Recipe.name] or {}
+                for _, ingredient in pairs(Recipe.ingredients) do
+                    local Name = ingredient.name
+                    if ingredient.temperature then
+                        Name = Name .. "|" .. ingredient.temperature
+                    end
+                    table.insert(Values[Recipe.name], Levels[Name] or 1)
+                end
+                Values[Recipe.name] = (function()
+                    local Max = 0
+                    for _, Value in pairs(Values[Recipe.name]) do
+                        if Value > Max then
+                            Max = Value
+                        end
+                    end
+                    return Max
+                end)()
             end
-        end
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
+            --- Buscar el nivel más bajo
+            local Min = math.huge
+            for _, Value in pairs(Values) do
+                if Value < Min then
+                    Min = Value
+                end
+            end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local function create_levels_2()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        while GMOD.get_length(Recipes) do
-            local Level = {}
-            table.insert(This_MOD.levels, Level)
-
-            for key, recipe in pairs(Recipes) do
-                if validate_ingredients(recipe.ingredients) then
-                    for _, result in pairs(recipe.results or {}) do
+            --- Agregar la receta al nivel
+            for name, Value in pairs(Values) do
+                if Value == Min then
+                    for _, result in pairs(Recipes[name].results) do
                         local Name = result.name
                         if result.maximum_temperature then
-                            if not Levels[Name] then Levels[Name] = #This_MOD.levels end
                             Name = Name .. "|" .. result.maximum_temperature
+                            Levels[result.name] = Min + 1
                         elseif result.temperature then
-                            if not Levels[Name] then Levels[Name] = #This_MOD.levels end
                             Name = Name .. "|" .. result.temperature
+                            Levels[result.name] = Min + 1
                         end
 
-                        if not Levels[Name] then
-                            Levels[Name] = {
-                                name = Name,
-                                level = #This_MOD.levels,
-                                value = Math:new(),
-                                ignored = recipe.ignored,
-
-                                recipe = recipe,
-                                results = recipe.results,
-                                ingredients = result.ingredients,
-                            }
-                            Levels[Name] = #This_MOD.levels
-                        end
-
-                        Recipes[key] = nil
-                        if not recipe.ignored then
-                            Level[recipe.name] = recipe
-                        end
+                        if not Levels[Name] then Levels[Name] = Min + 1 end
+                        if not This_MOD.levels[Min + 1] then This_MOD.levels[Min + 1] = {} end
+                        table.insert(This_MOD.levels[Min + 1], Recipes[name])
                     end
-                end
-            end
-
-            if not GMOD.get_length(Level) then
-                GMOD.var_dump("FORCE", #This_MOD.levels - 1)
-                break
-            end
-        end
-
-
-        local Not_found = {}
-        for key, recipe in pairs(Recipes) do
-            for _, ingredient in pairs(recipe.ingredients or {}) do
-                local Name = ingredient.name
-
-                if ingredient.temperature then
-                    Name = Name .. "|" .. ingredient.temperature
-                end
-
-                if not Levels[Name] then
-                    Not_found[key] = Not_found[key] or {}
-                    Not_found[key].ingredients = Not_found[key].ingredients or {}
-
-                    Not_found[key].results = recipe.results
-                    table.insert(Not_found[key].ingredients, Name)
+                    Recipes[name] = nil
                 end
             end
         end
-
-        GMOD.var_dump(
-            "Not_found: " .. (GMOD.get_length(Not_found) or 0),
-            Not_found
-        )
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
@@ -1628,13 +1562,13 @@ function This_MOD.set_value_zero()
     This_MOD.levels = { [1] = {} }
 
     --- Elementos del nivel cero
-    get_resource()
     get_fluids()
-    get_environment_items()
+    get_resource()
     get_fluid_producers()
+    get_environment_items()
     get_items_without_recipes()
 
-    create_levels_2()
+    create_levels()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1643,12 +1577,12 @@ function This_MOD.set_value_zero()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    -- GMOD.var_dump("Recipes", GMOD.get_length(Recipes))
-    -- GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
+    GMOD.var_dump("Recipes", GMOD.get_length(Recipes))
+    GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     -- GMOD.var_dump("Recipes", Recipes)
     -- GMOD.var_dump("This_MOD.levels", This_MOD.levels)
-    GMOD.var_dump("Levels", Levels)
+    -- GMOD.var_dump("Levels", Levels)
     -- GMOD.var_dump(GMOD.entities["boiler"])
     ERROR()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
