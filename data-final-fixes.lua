@@ -1160,27 +1160,6 @@ function This_MOD.set_value_zero()
     --- Elementos del nivel cero
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function get_resource()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Objectos minables
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for _, element in pairs(data.raw.resource) do
-            if element.minable then
-                for _, result in pairs(element.minable.results or {}) do
-                    repeat
-                        if result.type ~= "item" then break end
-                        if not GMOD.items[result.name] then break end
-                        This_MOD.levels[1][result.name] = { results = { { name = result.name } } }
-                        Levels[result.name] = 1
-                    until true
-                end
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
     local function get_fluids()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Variable de salida
@@ -1258,6 +1237,64 @@ function This_MOD.set_value_zero()
                     This_MOD.levels[1][Name] = { results = { { name = name, temperature = temperature } } }
                     Levels[Name] = 1
                 end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function get_resource()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Objectos minables
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, element in pairs(data.raw.resource) do
+            if element.minable then
+                for _, result in pairs(element.minable.results or {}) do
+                    repeat
+                        if result.type ~= "item" then break end
+                        if not GMOD.items[result.name] then break end
+                        This_MOD.levels[1][result.name] = { results = { { name = result.name } } }
+                        Levels[result.name] = 1
+                    until true
+                end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function get_fluid_producers()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, groups in pairs(data.raw) do
+            for _, entity in pairs(groups) do
+                repeat
+                    --- Validación
+                    if not entity.output_fluid_box then break end
+                    if entity.output_fluid_box.pipe_connections == 0 then break end
+                    if not entity.output_fluid_box.filter then break end
+
+                    if not entity.fluid_box then break end
+                    if entity.fluid_box.pipe_connections == 0 then break end
+                    if not entity.fluid_box.filter then break end
+
+                    --- Renombrar variable
+                    local Output = entity.output_fluid_box.filter
+                    local Input = entity.fluid_box.filter
+                    local Temperature = entity.target_temperature or entity.output_fluid_box.temperature
+
+                    if Temperature and Temperature == data.raw.fluid[Output].default_temperature then
+                        Temperature = nil
+                    end
+
+                    --- Guardar la temperatura
+                    Recipes[entity.name] = {
+                        ignored = true,
+                        ingredients = { { type = "fluid", name = Input } },
+                        results = { { type = "fluid", name = Output, temperature = Temperature } }
+                    }
+                until true
             end
         end
 
@@ -1383,45 +1420,6 @@ function This_MOD.set_value_zero()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    local function get_fluid_producers()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for _, groups in pairs(data.raw) do
-            for _, entity in pairs(groups) do
-                repeat
-                    --- Validación
-                    if not entity.output_fluid_box then break end
-                    if entity.output_fluid_box.pipe_connections == 0 then break end
-                    if not entity.output_fluid_box.filter then break end
-
-                    if not entity.fluid_box then break end
-                    if entity.fluid_box.pipe_connections == 0 then break end
-                    if not entity.fluid_box.filter then break end
-
-                    --- Renombrar variable
-                    local Output = entity.output_fluid_box.filter
-                    local Input = entity.fluid_box.filter
-                    local Temperature = entity.target_temperature or entity.output_fluid_box.temperature
-
-                    if Temperature and Temperature == data.raw.fluid[Output].default_temperature then
-                        Temperature = nil
-                    end
-
-                    --- Guardar la temperatura
-                    Recipes[entity.name] = {
-                        ignored = true,
-                        ingredients = { { type = "fluid", name = Input } },
-                        results = { { type = "fluid", name = Output, temperature = Temperature } }
-                    }
-                until true
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local function validate_ingredients(ingredients)
@@ -1538,7 +1536,8 @@ function This_MOD.set_value_zero()
 
                         if not Levels[Name] then Levels[Name] = Min + 1 end
                         if not This_MOD.levels[Min + 1] then This_MOD.levels[Min + 1] = {} end
-                        table.insert(This_MOD.levels[Min + 1], Recipes[name])
+                        This_MOD.levels[Min + 1][">>> " .. Recipes[name].name] = Recipes[name]
+                        -- table.insert(This_MOD.levels[Min + 1], Recipes[name])
                     end
                     Recipes[name] = nil
                 end
@@ -1581,8 +1580,8 @@ function This_MOD.set_value_zero()
     GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     -- GMOD.var_dump("Recipes", Recipes)
-    -- GMOD.var_dump("This_MOD.levels", This_MOD.levels)
-    -- GMOD.var_dump("Levels", Levels)
+    GMOD.var_dump("This_MOD.levels", This_MOD.levels)
+    GMOD.var_dump("Levels", Levels)
     -- GMOD.var_dump(GMOD.entities["boiler"])
     ERROR()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
