@@ -1392,11 +1392,8 @@ function This_MOD.set_value_zero()
 
             --- Enlistar las recetas
             if
-                recipe.ingredients and
-                recipe.results and (
-                    #recipe.ingredients > 0 or
-                    #recipe.results > 0
-                )
+                (recipe.ingredients and recipe.results) and
+                (#recipe.ingredients > 0 or #recipe.results > 0)
             then
                 Recipes[recipe.name] = recipe
             end
@@ -1576,12 +1573,12 @@ function This_MOD.set_value_zero()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    GMOD.var_dump("Recipes", GMOD.get_length(Recipes))
-    GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
+    -- GMOD.var_dump("Recipes", GMOD.get_length(Recipes))
+    -- GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     -- GMOD.var_dump("Recipes", Recipes)
-    GMOD.var_dump("This_MOD.levels", This_MOD.levels)
-    GMOD.var_dump("Levels", Levels)
+    -- GMOD.var_dump("This_MOD.levels", This_MOD.levels)
+    -- GMOD.var_dump("Levels", Levels)
     -- GMOD.var_dump(GMOD.entities["boiler"])
     ERROR()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
