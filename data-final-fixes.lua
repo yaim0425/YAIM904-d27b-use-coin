@@ -1586,6 +1586,7 @@ end
 
 ---------------------------------------------------------------------------------------------------
 
+--- El siguiente paso es aplicar y usar esta estructura
 local xXx = {
     name = "",
     level = 0,
