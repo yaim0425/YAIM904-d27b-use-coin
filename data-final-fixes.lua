@@ -1227,14 +1227,28 @@ function This_MOD.set_value_zero()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         for name, temperatures in pairs(Return) do
-            Levels[name] = 1
-            if not GMOD.get_length(temperatures) then
-                This_MOD.levels[1][name] = { results = { { name = name } } }
-            else
+            Levels[name] = {
+                name = nil,
+                level = 1,
+                recipe = nil,
+                results = { { name = name } },
+                ingredients = nil,
+                value = Math:new(0),
+            }
+
+            if GMOD.get_length(temperatures) then
                 This_MOD.levels[1][name] = This_MOD.levels[1][name] or {}
                 for temperature, _ in pairs(temperatures) do
                     local Name = name .. "|" .. temperature
                     This_MOD.levels[1][Name] = { results = { { name = name, temperature = temperature } } }
+                    Levels[Name] = {
+                        name = nil,
+                        level = 1,
+                        recipe = nil,
+                        results = { { name = name, temperature = temperature } },
+                        ingredients = nil,
+                        value = Math:new(0),
+                    }
                     Levels[Name] = 1
                 end
             end
@@ -1255,7 +1269,14 @@ function This_MOD.set_value_zero()
                         if result.type ~= "item" then break end
                         if not GMOD.items[result.name] then break end
                         This_MOD.levels[1][result.name] = { results = { { name = result.name } } }
-                        Levels[result.name] = 1
+                        Levels[result.name] = {
+                            name = nil,
+                            level = 1,
+                            recipe = nil,
+                            results = { { name = result.name } },
+                            ingredients = nil,
+                            value = Math:new(0),
+                        }
                     until true
                 end
             end
@@ -1333,12 +1354,26 @@ function This_MOD.set_value_zero()
                         for _, results in pairs(Minable.results) do
                             if results.name then
                                 This_MOD.levels[1][results.name] = { results = { { name = results.name } } }
-                                Levels[results.name] = 1
+                                Levels[results.name] = {
+                                    name = nil,
+                                    level = 1,
+                                    recipe = nil,
+                                    results = { { name = results.name } },
+                                    ingredients = nil,
+                                    value = Math:new(0),
+                                }
                             end
                         end
                     elseif Minable.result then
                         This_MOD.levels[1][Minable.result] = { results = { { name = Minable.result } } }
-                        Levels[Minable.result] = 1
+                        Levels[Minable.result] = {
+                            name = nil,
+                            level = 1,
+                            recipe = nil,
+                            results = { { name = Minable.result } },
+                            ingredients = nil,
+                            value = Math:new(0),
+                        }
                     end
                 end
             end
@@ -1411,7 +1446,14 @@ function This_MOD.set_value_zero()
 
         for name, _ in pairs(Items) do
             This_MOD.levels[1][name] = { results = { { name = name } } }
-            Levels[name] = 1
+            Levels[name] = {
+                name = nil,
+                level = 1,
+                recipe = nil,
+                results = { { name = name } },
+                ingredients = nil,
+                value = Math:new(0),
+            }
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1451,27 +1493,25 @@ function This_MOD.set_value_zero()
                 for key, Recipe in pairs(Recipes) do
                     if validate_ingredients(Recipe.ingredients) then
                         for _, result in pairs(Recipe.results or {}) do
-                            local Name = result.name
-                            if result.maximum_temperature then
-                                if not Levels[Name] then Levels[Name] = #This_MOD.levels end
-                                Name = Name .. "|" .. result.maximum_temperature
-                            elseif result.temperature then
-                                if not Levels[Name] then Levels[Name] = #This_MOD.levels end
-                                Name = Name .. "|" .. result.temperature
-                            end
+                            local Names = { result.name }
 
-                            if not Levels[Name] then
-                                Levels[Name] = {
-                                    name = Name,
-                                    level = #This_MOD.levels,
-                                    value = Math:new(),
-                                    ignored = Recipe.ignored,
+                            local Temperature = result.maximum_temperature or result.temperature
+                            if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
 
-                                    recipe = Recipe,
-                                    results = Recipe.results,
-                                    ingredients = result.ingredients,
-                                }
-                                Levels[Name] = #This_MOD.levels
+                            for _, Name in pairs(Names) do
+                                if not Levels[Name] then
+                                    Levels[Name] = {
+                                        name = Recipe.name,
+                                        level = #This_MOD.levels,
+                                        ignored = Recipe.ignored,
+
+                                        recipe = Recipe,
+                                        results = Recipe.results,
+                                        ingredients = result.ingredients,
+
+                                        value = Math:new(Recipe.energy_required)
+                                    }
+                                end
                             end
 
                             Recipes[key] = nil
@@ -1497,7 +1537,19 @@ function This_MOD.set_value_zero()
                     if ingredient.temperature then
                         Name = Name .. "|" .. ingredient.temperature
                     end
-                    table.insert(Values[Recipe.name], Levels[Name] or 1)
+GMOD.var_dump({
+    ["Levels[Name]"] = Levels[Name],
+    level = Levels[Name].level or 0,
+    Name = Name,
+    Recipe = Recipe,
+    Values = Values,
+    ["Values[" .. Recipe.name .. "]"] = Values[Recipe.name],
+    Levels = Levels,
+})
+local A = Values[Recipe.name]
+local B = Levels[Name].level or 1
+                    -- table.insert(Values[Recipe.name], Levels[Name].level or 1)
+                    table.insert(A, B)
                 end
                 Values[Recipe.name] = (function()
                     local Max = 0
@@ -1522,19 +1574,30 @@ function This_MOD.set_value_zero()
             for name, Value in pairs(Values) do
                 if Value == Min then
                     for _, result in pairs(Recipes[name].results) do
-                        local Name = result.name
-                        if result.maximum_temperature then
-                            Name = Name .. "|" .. result.maximum_temperature
-                            Levels[result.name] = Min + 1
-                        elseif result.temperature then
-                            Name = Name .. "|" .. result.temperature
-                            Levels[result.name] = Min + 1
+                        local Names = { result.name }
+                        local Recipe = Recipes[name]
+
+                        local Temperature = result.maximum_temperature or result.temperature
+                        if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
+
+                        for _, Name in pairs(Names) do
+                            if not Levels[Name] then
+                                Levels[Name] = {
+                                    name = Recipe.name,
+                                    level = Min + 1,
+                                    ignored = Recipe.ignored,
+
+                                    recipe = Recipe,
+                                    results = Recipe.results,
+                                    ingredients = result.ingredients,
+
+                                    value = Math:new(Recipe.energy_required)
+                                }
+                            end
                         end
 
-                        if not Levels[Name] then Levels[Name] = Min + 1 end
                         if not This_MOD.levels[Min + 1] then This_MOD.levels[Min + 1] = {} end
-                        This_MOD.levels[Min + 1][">>> " .. Recipes[name].name] = Recipes[name]
-                        -- table.insert(This_MOD.levels[Min + 1], Recipes[name])
+                        This_MOD.levels[Min + 1][Recipe.name] = Recipe
                     end
                     Recipes[name] = nil
                 end
@@ -1573,12 +1636,12 @@ function This_MOD.set_value_zero()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    -- GMOD.var_dump("Recipes", GMOD.get_length(Recipes))
-    -- GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
+    GMOD.var_dump("Recipes", GMOD.get_length(Recipes))
+    GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     -- GMOD.var_dump("Recipes", Recipes)
     -- GMOD.var_dump("This_MOD.levels", This_MOD.levels)
-    -- GMOD.var_dump("Levels", Levels)
+    GMOD.var_dump("Levels", Levels)
     -- GMOD.var_dump(GMOD.entities["boiler"])
     ERROR()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
