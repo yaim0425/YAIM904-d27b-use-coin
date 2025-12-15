@@ -39,14 +39,6 @@ function This_MOD.start()
         end
     end
 
-    This_MOD.set_value_zero()
-
-
-
-
-
-
-
     --- Recetas de conversión
     This_MOD.get_elements_to_effect()
     This_MOD.calculate_coins()
@@ -1140,509 +1132,6 @@ end
 
 
 ---------------------------------------------------------------------------------------------------
----[ Nuevo metodo ]---
----------------------------------------------------------------------------------------------------
-
-function This_MOD.set_value_zero()
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Variables a usar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local Levels, Recipes = {}, {}
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Elementos del nivel cero
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local function get_fluids()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Variable de salida
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Return = {}
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Validar el fluido
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local function validate(element)
-            if element.type ~= "fluid" then return end
-
-            local Temperatures = Return[element.name] or {}
-            Return[element.name] = Temperatures
-
-            if element.maximum_temperature then
-                Temperatures[element.maximum_temperature] = true
-            elseif element.temperature then
-                Temperatures[element.temperature] = true
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Obtener los fluidos
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        --- Fluidos tomados del suelo
-        for _, tile in pairs(data.raw.tile) do
-            if tile.fluid then
-                Return[tile.fluid] = {}
-            end
-        end
-
-        --- Fluidos minables
-        for _, resource in pairs(data.raw.resource) do
-            if resource.minable then
-                for _, result in pairs(resource.minable.results or {}) do
-                    validate(result)
-                end
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Dar el formato deseado
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for name, temperatures in pairs(Return) do
-            Levels[name] = {
-                name = nil,
-                level = 1,
-                recipe = nil,
-                results = { { name = name } },
-                ingredients = nil,
-                value = Math:new(0),
-            }
-
-            if GMOD.get_length(temperatures) then
-                This_MOD.levels[1][name] = This_MOD.levels[1][name] or {}
-                for temperature, _ in pairs(temperatures) do
-                    local Name = name .. "|" .. temperature
-                    This_MOD.levels[1][Name] = { results = { { name = name, temperature = temperature } } }
-                    Levels[Name] = {
-                        name = nil,
-                        level = 1,
-                        recipe = nil,
-                        results = { { name = name, temperature = temperature } },
-                        ingredients = nil,
-                        value = Math:new(0),
-                    }
-                    Levels[Name] = 1
-                end
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    local function get_resource()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Objectos minables
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for _, element in pairs(data.raw.resource) do
-            if element.minable then
-                for _, result in pairs(element.minable.results or {}) do
-                    repeat
-                        if result.type ~= "item" then break end
-                        if not GMOD.items[result.name] then break end
-                        This_MOD.levels[1][result.name] = { results = { { name = result.name } } }
-                        Levels[result.name] = {
-                            name = nil,
-                            level = 1,
-                            recipe = nil,
-                            results = { { name = result.name } },
-                            ingredients = nil,
-                            value = Math:new(0),
-                        }
-                    until true
-                end
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    local function get_fluid_producers()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for _, groups in pairs(data.raw) do
-            for _, entity in pairs(groups) do
-                repeat
-                    --- Validación
-                    if not entity.output_fluid_box then break end
-                    if entity.output_fluid_box.pipe_connections == 0 then break end
-                    if not entity.output_fluid_box.filter then break end
-
-                    if not entity.fluid_box then break end
-                    if entity.fluid_box.pipe_connections == 0 then break end
-                    if not entity.fluid_box.filter then break end
-
-                    --- Renombrar variable
-                    local Output = entity.output_fluid_box.filter
-                    local Input = entity.fluid_box.filter
-                    local Temperature = entity.target_temperature or entity.output_fluid_box.temperature
-
-                    if Temperature and Temperature == data.raw.fluid[Output].default_temperature then
-                        Temperature = nil
-                    end
-
-                    --- Guardar la temperatura
-                    Recipes[entity.name] = {
-                        ignored = true,
-                        ingredients = { { type = "fluid", name = Input } },
-                        results = { { type = "fluid", name = Output, temperature = Temperature } }
-                    }
-                until true
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    local function get_environment_items()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Tipos a buscar
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Allowed_types = {
-            ["tree"] = true,
-            ["simple-entity"] = true,
-            ["simple-entity-with-force"] = true,
-            ["simple-entity-with-owner"] = true,
-            ["resource"] = true,
-            ["fish"] = true,
-        }
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Buscar los objetos
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for type, _ in pairs(Allowed_types) do
-            for _, prototype in pairs(data.raw[type] or {}) do
-                local Minable = prototype.minable
-                if Minable then
-                    if Minable.results then
-                        for _, results in pairs(Minable.results) do
-                            if results.name then
-                                This_MOD.levels[1][results.name] = { results = { { name = results.name } } }
-                                Levels[results.name] = {
-                                    name = nil,
-                                    level = 1,
-                                    recipe = nil,
-                                    results = { { name = results.name } },
-                                    ingredients = nil,
-                                    value = Math:new(0),
-                                }
-                            end
-                        end
-                    elseif Minable.result then
-                        This_MOD.levels[1][Minable.result] = { results = { { name = Minable.result } } }
-                        Levels[Minable.result] = {
-                            name = nil,
-                            level = 1,
-                            recipe = nil,
-                            results = { { name = Minable.result } },
-                            ingredients = nil,
-                            value = Math:new(0),
-                        }
-                    end
-                end
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    local function get_items_without_recipes()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Variables a usar
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Items = {}
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Cargar los objetos existentes
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for _, elements in pairs(data.raw) do
-            for _, element in pairs(elements) do
-                if element.stack_size then
-                    Items[element.name] = true
-                end
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Eliminar los objetos con recetas
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for _, recipe in pairs(data.raw.recipe) do
-            --- Eliminar objetos con recetas
-            for _, result in pairs(recipe.results or {}) do
-                if result.type == "item" then
-                    Items[result.name] = nil
-                end
-            end
-
-            --- Enlistar las recetas
-            if
-                (recipe.ingredients and recipe.results) and
-                (#recipe.ingredients > 0 or #recipe.results > 0)
-            then
-                Recipes[recipe.name] = recipe
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Guardar el resultado
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for name, _ in pairs(Items) do
-            This_MOD.levels[1][name] = { results = { { name = name } } }
-            Levels[name] = {
-                name = nil,
-                level = 1,
-                recipe = nil,
-                results = { { name = name } },
-                ingredients = nil,
-                value = Math:new(0),
-            }
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local function validate_ingredients(ingredients)
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for _, ingredient in pairs(ingredients or {}) do
-            local Name = ingredient.name
-
-            if ingredient.temperature then
-                Name = Name .. "|" .. ingredient.temperature
-            end
-
-            if not Levels[Name] then
-                return
-            end
-        end
-
-        return true
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    local function create_levels()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        while GMOD.get_length(Recipes) do
-            --- Recorrer las recetas
-            while GMOD.get_length(Recipes) do
-                local Level = {}
-                table.insert(This_MOD.levels, Level)
-
-                for key, Recipe in pairs(Recipes) do
-                    if validate_ingredients(Recipe.ingredients) then
-                        for _, result in pairs(Recipe.results or {}) do
-                            local Names = { result.name }
-
-                            local Temperature = result.maximum_temperature or result.temperature
-                            if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
-
-                            for _, Name in pairs(Names) do
-                                if not Levels[Name] then
-                                    Levels[Name] = {
-                                        name = Recipe.name,
-                                        level = #This_MOD.levels,
-                                        ignored = Recipe.ignored,
-
-                                        recipe = Recipe,
-                                        results = Recipe.results,
-                                        ingredients = result.ingredients,
-
-                                        value = Math:new(Recipe.energy_required)
-                                    }
-                                end
-                            end
-
-                            Recipes[key] = nil
-                            if not Recipe.ignored then
-                                Level[Recipe.name] = Recipe
-                            end
-                        end
-                    end
-                end
-
-                if not GMOD.get_length(Level) then
-                    table.remove(This_MOD.levels, #This_MOD.levels)
-                    break
-                end
-            end
-
-            --- Procesar las recetas sin evaluar
-            local Values = {}
-            for _, Recipe in pairs(Recipes) do
-                Values[Recipe.name] = Values[Recipe.name] or {}
-                for _, ingredient in pairs(Recipe.ingredients) do
-                    local Name = ingredient.name
-                    if ingredient.temperature then
-                        Name = Name .. "|" .. ingredient.temperature
-                    end
-
-                    table.insert(Values[Recipe.name], (Levels[Name] or {}).level or 1)
-                end
-                Values[Recipe.name] = (function()
-                    local Max = 0
-                    for _, Value in pairs(Values[Recipe.name]) do
-                        if Value > Max then
-                            Max = Value
-                        end
-                    end
-                    return Max
-                end)()
-            end
-
-            --- Buscar el nivel más bajo
-            local Min = math.huge
-            for _, Value in pairs(Values) do
-                if Value < Min then
-                    Min = Value
-                end
-            end
-
-            --- Agregar la receta al nivel
-            for name, Value in pairs(Values) do
-                if Value == Min then
-                    for _, result in pairs(Recipes[name].results) do
-                        local Names = { result.name }
-                        local Recipe = Recipes[name]
-
-                        local Temperature = result.maximum_temperature or result.temperature
-                        if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
-
-                        for _, Name in pairs(Names) do
-                            if not Levels[Name] then
-                                Levels[Name] = {
-                                    name = Recipe.name,
-                                    level = Min + 1,
-                                    ignored = Recipe.ignored,
-
-                                    recipe = Recipe,
-                                    results = Recipe.results,
-                                    ingredients = result.ingredients,
-
-                                    value = Math:new(Recipe.energy_required)
-                                }
-                            end
-                        end
-
-                        if not This_MOD.levels[Min + 1] then This_MOD.levels[Min + 1] = {} end
-                        This_MOD.levels[Min + 1][Recipe.name] = Recipe
-                    end
-                    Recipes[name] = nil
-                end
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Valores a afectar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    --- Inicializar los contenedores
-    This_MOD.levels = { [1] = {} }
-
-    --- Elementos del nivel cero
-    get_fluids()
-    get_resource()
-    get_fluid_producers()
-    get_environment_items()
-    get_items_without_recipes()
-
-    create_levels()
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    -- GMOD.var_dump("Recipes", GMOD.get_length(Recipes))
-    -- GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    -- GMOD.var_dump("Recipes", Recipes)
-    -- GMOD.var_dump("This_MOD.levels", This_MOD.levels)
-    -- GMOD.var_dump("Levels", Levels)
-    -- GMOD.var_dump(GMOD.entities["boiler"])
-    ERROR()
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-end
-
----------------------------------------------------------------------------------------------------
-
-
-
-
-
----------------------------------------------------------------------------------------------------
 ---[ Cambios del MOD ]---
 ---------------------------------------------------------------------------------------------------
 
@@ -1771,7 +1260,9 @@ function This_MOD.calculate_coins()
     --- Variables a usar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local Values, Cache = {}, {}
+    local List = {}    --- Lista de item/fluid base para calcular
+    local Levels = {}  --- Recetas clasificadas por niveles
+    local Recipes = {} --- Listado de todas las recetas a ordernar
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1780,77 +1271,531 @@ function This_MOD.calculate_coins()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Calculates el valor del element dado
+    --- Elementos del nivel cero
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function set_value(name)
+    local function get_fluids()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Variable de salida
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- Evitar bucles
-        if Cache[name] then
-            local Value = Math:new()
-            Value.name = name
-            return Value
-        end
-        Cache[name] = true
+        local Return = {}
 
-        --- Valor ya calculado
-        if Values[name] then
-            Cache[name] = nil
-            return Values[name]
-        end
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- Item sin receta
-        if not GMOD.recipes[name] then
-            Cache[name] = nil
-            Values[name] = Math:new(This_MOD.value_default)
-            return Values[name]
-        end
 
-        --- Valor total de la receta
-        Values[name] = Math:new(This_MOD.value_default)
-        for _, recipe in pairs(GMOD.recipes[name]) do
-            if not GMOD.has_id(recipe.name, This_MOD.id) then
-                --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-                --- Agregar el tiempo
-                local Value = Math:new(recipe.energy_required or 0.5)
 
-                --- Calcular los ingredients
-                if recipe.ingredients and #recipe.ingredients > 0 then
-                    for _, ingredient in pairs(recipe.ingredients) do
-                        local Ingredient = set_value(ingredient.name):copy()
-                        Ingredient.name = ingredient.name
-                        Ingredient:mult(ingredient.amount)
-                        Value:add(Ingredient)
-                    end
-                end
 
-                --- Calcular el valor del objeto
-                for _, result in pairs(recipe.results or {}) do
-                    local Amount = result.amount_max or result.amount
-                    local Result = Value:copy()
-                    Result:div(Amount)
-                    Result.name = result.name
-                    Result.carry = nil
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validar el fluido
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-                    --- Asignar el mayor valor
-                    Values[name] = Values[name] or Math:new()
-                    if Result:greater_than(Values[name]) then
-                        Values[name] = Result
-                    end
-                end
+        local function validate(element)
+            if element.type ~= "fluid" then return end
 
-                --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+            local Temperatures = Return[element.name] or {}
+            Return[element.name] = Temperatures
+
+            if element.maximum_temperature then
+                Temperatures[element.maximum_temperature] = true
+            elseif element.temperature then
+                Temperatures[element.temperature] = true
             end
         end
 
-        --- Asignar el menor valor
-        Cache[name] = nil
-        return Values[name]
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Obtener los fluidos
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Fluidos tomados del suelo
+        for _, tile in pairs(data.raw.tile) do
+            if tile.fluid then
+                Return[tile.fluid] = {}
+            end
+        end
+
+        --- Fluidos minables
+        for _, resource in pairs(data.raw.resource) do
+            if resource.minable then
+                for _, result in pairs(resource.minable.results or {}) do
+                    validate(result)
+                end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Dar el formato deseado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for name, temperatures in pairs(Return) do
+            List[name] = {
+                name = nil,
+                level = 1,
+                recipe = nil,
+                results = { { name = name } },
+                ingredients = nil,
+                value = Math:new(0),
+            }
+
+            if GMOD.get_length(temperatures) then
+                Levels[1][name] = Levels[1][name] or {}
+                for temperature, _ in pairs(temperatures) do
+                    local Name = name .. "|" .. temperature
+                    Levels[1][Name] = { results = { { name = name, temperature = temperature } } }
+                    List[Name] = {
+                        name = nil,
+                        level = 1,
+                        recipe = nil,
+                        results = { { name = name, temperature = temperature } },
+                        ingredients = nil,
+                        value = Math:new(0),
+                    }
+                    List[Name] = 1
+                end
+            end
+        end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
+
+    local function get_resource()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Objectos minables
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, element in pairs(data.raw.resource) do
+            if element.minable then
+                for _, result in pairs(element.minable.results or {}) do
+                    repeat
+                        if result.type ~= "item" then break end
+                        if not GMOD.items[result.name] then break end
+                        Levels[1][result.name] = { results = { { name = result.name } } }
+                        List[result.name] = {
+                            name = nil,
+                            level = 1,
+                            recipe = nil,
+                            results = { { name = result.name } },
+                            ingredients = nil,
+                            value = Math:new(0),
+                        }
+                    until true
+                end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function get_fluid_producers()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, groups in pairs(data.raw) do
+            for _, entity in pairs(groups) do
+                repeat
+                    --- Validación
+                    if not entity.output_fluid_box then break end
+                    if entity.output_fluid_box.pipe_connections == 0 then break end
+                    if not entity.output_fluid_box.filter then break end
+
+                    if not entity.fluid_box then break end
+                    if entity.fluid_box.pipe_connections == 0 then break end
+                    if not entity.fluid_box.filter then break end
+
+                    --- Renombrar variable
+                    local Output = entity.output_fluid_box.filter
+                    local Input = entity.fluid_box.filter
+                    local Temperature = entity.target_temperature or entity.output_fluid_box.temperature
+
+                    if Temperature and Temperature == data.raw.fluid[Output].default_temperature then
+                        Temperature = nil
+                    end
+
+                    --- Guardar la temperatura
+                    Recipes[entity.name] = {
+                        ignored = true,
+                        ingredients = { { type = "fluid", name = Input } },
+                        results = { { type = "fluid", name = Output, temperature = Temperature } }
+                    }
+                until true
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function get_environment_items()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Tipos a buscar
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Allowed_types = {
+            ["tree"] = true,
+            ["simple-entity"] = true,
+            ["simple-entity-with-force"] = true,
+            ["simple-entity-with-owner"] = true,
+            ["resource"] = true,
+            ["fish"] = true,
+        }
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Buscar los objetos
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for type, _ in pairs(Allowed_types) do
+            for _, prototype in pairs(data.raw[type] or {}) do
+                local Minable = prototype.minable
+                if Minable then
+                    local Results = Minable.results
+                    if Minable.result then
+                        Results = { { name = Minable.result } }
+                    end
+
+                    for _, result in pairs(Results or {}) do
+                        Levels[1][result.name] = { results = { { name = result.name } } }
+                        List[result.name] = {
+                            name = nil,
+                            level = 1,
+                            recipe = nil,
+                            results = { { name = result.name } },
+                            ingredients = nil,
+                            value = Math:new(0),
+                        }
+                    end
+                end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function get_items_without_recipes()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Variables a usar
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Items = {}
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Cargar los objetos existentes
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, elements in pairs(data.raw) do
+            for _, element in pairs(elements) do
+                if element.stack_size then
+                    Items[element.name] = true
+                end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Eliminar los objetos con recetas
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, recipe in pairs(data.raw.recipe) do
+            --- Eliminar objetos con recetas
+            for _, result in pairs(recipe.results or {}) do
+                if result.type == "item" then
+                    Items[result.name] = nil
+                end
+            end
+
+            --- Enlistar las recetas
+            if
+                (recipe.ingredients and recipe.results) and
+                (#recipe.ingredients > 0 or #recipe.results > 0)
+            then
+                Recipes[recipe.name] = recipe
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Guardar el resultado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for name, _ in pairs(Items) do
+            Levels[1][name] = { results = { { name = name } } }
+            List[name] = {
+                name = nil,
+                level = 1,
+                recipe = nil,
+                results = { { name = name } },
+                ingredients = nil,
+                value = Math:new(0),
+            }
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function validate_ingredients(ingredients)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, ingredient in pairs(ingredients or {}) do
+            local Name = ingredient.name
+
+            if ingredient.temperature then
+                Name = Name .. "|" .. ingredient.temperature
+            end
+
+            if not List[Name] then
+                return
+            end
+        end
+
+        return true
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function calculate_coins()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Procesar las recetas
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        while GMOD.get_length(Recipes) do
+            --- Recorrer las recetas
+            while GMOD.get_length(Recipes) do
+                local Level = {}
+                table.insert(Levels, Level)
+
+                for key, Recipe in pairs(Recipes) do
+                    if validate_ingredients(Recipe.ingredients) then
+                        for _, result in pairs(Recipe.results or {}) do
+                            local Names = { result.name }
+
+                            local Temperature = result.maximum_temperature or result.temperature
+                            if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
+
+                            for _, Name in pairs(Names) do
+                                if not List[Name] then
+                                    List[Name] = {
+                                        name = Recipe.name,
+                                        level = #Levels,
+                                        ignored = Recipe.ignored,
+
+                                        recipe = Recipe,
+                                        results = Recipe.results,
+                                        ingredients = Recipe.ingredients,
+
+                                        value = Math:new(Recipe.energy_required)
+                                    }
+                                end
+                            end
+
+                            Recipes[key] = nil
+                            if not Recipe.ignored then
+                                Level[Recipe.name] = Recipe
+                            end
+                        end
+                    end
+                end
+
+                if not GMOD.get_length(Level) then
+                    table.remove(Levels, #Levels)
+                    break
+                end
+            end
+
+            --- Procesar las recetas sin evaluar
+            local Values = {}
+            for _, Recipe in pairs(Recipes) do
+                Values[Recipe.name] = Values[Recipe.name] or {}
+                for _, ingredient in pairs(Recipe.ingredients) do
+                    local Name = ingredient.name
+                    if ingredient.temperature then
+                        Name = Name .. "|" .. ingredient.temperature
+                    end
+                    table.insert(Values[Recipe.name], (List[Name] or {}).level or 1)
+                end
+                Values[Recipe.name] = (function()
+                    local Max = 0
+                    for _, Value in pairs(Values[Recipe.name]) do
+                        if Value > Max then
+                            Max = Value
+                        end
+                    end
+                    return Max
+                end)()
+            end
+
+            --- Buscar el nivel más bajo
+            local Min = math.huge
+            for _, Value in pairs(Values) do
+                if Value < Min then
+                    Min = Value
+                end
+            end
+
+            --- Agregar la receta al nivel
+            for name, Value in pairs(Values) do
+                if Value == Min then
+                    for _, result in pairs(Recipes[name].results) do
+                        local Names = { result.name }
+                        local Recipe = Recipes[name]
+
+                        local Temperature = result.maximum_temperature or result.temperature
+                        if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
+
+                        for _, Name in pairs(Names) do
+                            if not List[Name] then
+                                List[Name] = {
+                                    name = Recipe.name,
+                                    level = Min + 1,
+                                    ignored = Recipe.ignored,
+
+                                    recipe = Recipe,
+                                    results = Recipe.results,
+                                    ingredients = result.ingredients,
+
+                                    value = Math:new(Recipe.energy_required)
+                                }
+                            end
+                        end
+
+                        if not Levels[Min + 1] then Levels[Min + 1] = {} end
+                        Levels[Min + 1][Recipe.name] = Recipe
+                    end
+                    Recipes[name] = nil
+                end
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Crear el oreden para calcular el valor
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        Levels = {}
+        for _, value in pairs(List) do
+            Levels[value.level] = Levels[value.level] or {}
+            table.insert(Levels[value.level], value)
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Calcular los valores
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Calcular el valor de las recetas
+        for _, Level in pairs(Levels) do
+            for _, Element in pairs(Level) do
+                for _, ingredient in pairs(Element.ingredients or {}) do
+                    local Value = List[ingredient.name]
+                    if Value then
+                        Value = Value.value:copy()
+                        Value:mult(ingredient.amount)
+                        Element.value:add(Value)
+                    end
+                end
+                Element.ingredients = nil
+            end
+        end
+
+        --- Calcular el valor de cada item/fluid
+        for key, Element in pairs(List) do
+            repeat
+                --- Eliminar el nuvel 1
+                if Element.level == 1 then
+                    List[key] = nil
+                    break
+                end
+
+                --- Calcular valor por unidad
+                local Amount = 1
+                for _, Result in pairs(Element.results) do
+                    if Result.name == key and Result.amount then
+                        Amount = Result.amount
+                    end
+                end
+                List[key] = Element.value:copy()
+                List[key]:div(Amount)
+                List[key].carry = nil
+
+                --- Eliminar los valores cero
+                if
+                    #List[key].value == 3 and
+                    List[key].value[1] == 0 and
+                    List[key].value[3] == 0
+                then
+                    List[key] = nil
+                    break
+                end
+            until true
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Valores a afectar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Inicializar los contenedores
+    Levels = { [1] = {} }
+
+    --- Elementos del nivel cero
+    get_fluids()
+    get_resource()
+    get_fluid_producers()
+    get_environment_items()
+    get_items_without_recipes()
+
+    calculate_coins()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1867,48 +1812,49 @@ function This_MOD.calculate_coins()
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
             --- Valor del elemento
-            local Value = set_value(space.element.name)
+            local Value = List[space.element.name]
+            if Value then
+                --- Convertir el valor en monedas
+                space.coins = {}
+                for action, value in pairs(This_MOD.actions) do
+                    --- Contenedor de salida
+                    space.coins[action] = {}
 
-            --- Convertir el valor en monedas
-            space.coins = {}
-            for action, value in pairs(This_MOD.actions) do
-                --- Contenedor de salida
-                space.coins[action] = {}
+                    --- Convertir en el formato
+                    local Coins = Value:copy()
+                    if This_MOD.actions.sell == value then Coins:div(2) end
+                    for i, num in pairs(Coins:finish()) do
+                        if num >= 0 then
+                            table.insert(space.coins[action], {
+                                type = "item",
+                                amount = num,
+                                name = This_MOD.coin_name .. "-" .. i,
+                                ignored_by_productivity = 0,
+                                ignored_by_stats = num
+                            })
+                        end
+                    end
 
-                --- Convertir en el formato
-                local Coins = Value:copy()
-                if This_MOD.actions.sell == value then Coins:div(2) end
-                for i, num in pairs(Coins:finish()) do
-                    if num >= 0 then
-                        table.insert(space.coins[action], {
-                            type = "item",
-                            amount = num,
-                            name = This_MOD.coin_name .. "-" .. i,
-                            ignored_by_productivity = 0,
-                            ignored_by_stats = num
-                        })
+                    --- Eliminar contenedor vacio
+                    if #space.coins[action] == 0 then
+                        space.coins[action] = nil
                     end
                 end
 
                 --- Eliminar contenedor vacio
-                if #space.coins[action] == 0 then
-                    space.coins[action] = nil
+                if not GMOD.get_length(space.coins) then
+                    space.coins = nil
                 end
-            end
 
-            --- Eliminar contenedor vacio
-            if not GMOD.get_length(space.coins) then
-                space.coins = nil
-            end
+                --- Guardar el maximo valor a usar
+                if not This_MOD.value_maximo then
+                    This_MOD.value_maximo = Math:new(0)
+                end
 
-            --- Guardar el maximo valor a usar
-            if not This_MOD.value_maximo then
-                This_MOD.value_maximo = Math:new(0)
-            end
-
-            --- Referencia del numero más grande
-            if Value:greater_than(This_MOD.value_maximo) then
-                This_MOD.value_maximo = Value
+                --- Referencia del numero más grande
+                if Value:greater_than(This_MOD.value_maximo) then
+                    This_MOD.value_maximo = Value
+                end
             end
 
             --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
