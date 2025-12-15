@@ -1537,19 +1537,8 @@ function This_MOD.set_value_zero()
                     if ingredient.temperature then
                         Name = Name .. "|" .. ingredient.temperature
                     end
-GMOD.var_dump({
-    ["Levels[Name]"] = Levels[Name],
-    level = Levels[Name].level or 0,
-    Name = Name,
-    Recipe = Recipe,
-    Values = Values,
-    ["Values[" .. Recipe.name .. "]"] = Values[Recipe.name],
-    Levels = Levels,
-})
-local A = Values[Recipe.name]
-local B = Levels[Name].level or 1
-                    -- table.insert(Values[Recipe.name], Levels[Name].level or 1)
-                    table.insert(A, B)
+
+                    table.insert(Values[Recipe.name], (Levels[Name] or {}).level or 1)
                 end
                 Values[Recipe.name] = (function()
                     local Max = 0
@@ -1636,28 +1625,16 @@ local B = Levels[Name].level or 1
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    GMOD.var_dump("Recipes", GMOD.get_length(Recipes))
-    GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
+    -- GMOD.var_dump("Recipes", GMOD.get_length(Recipes))
+    -- GMOD.var_dump("This_MOD.levels", #This_MOD.levels)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     -- GMOD.var_dump("Recipes", Recipes)
     -- GMOD.var_dump("This_MOD.levels", This_MOD.levels)
-    GMOD.var_dump("Levels", Levels)
+    -- GMOD.var_dump("Levels", Levels)
     -- GMOD.var_dump(GMOD.entities["boiler"])
     ERROR()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
-
----------------------------------------------------------------------------------------------------
-
---- El siguiente paso es aplicar y usar esta estructura
-local xXx = {
-    name = "",
-    level = 0,
-    recipe = {},
-    results = {},
-    ingredients = {},
-    value = Math:new(),
-}
 
 ---------------------------------------------------------------------------------------------------
 
