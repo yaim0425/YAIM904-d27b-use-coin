@@ -125,7 +125,7 @@ function This_MOD.reference_values()
         localised_name = {},
         localised_description = { "" },
         energy_required = 1,
-        enabled = false,
+        enabled = not This_MOD.setting.tech,
 
         hide_from_player_crafting = true,
         hidden_in_factoriopedia = true,
@@ -272,56 +272,19 @@ function This_MOD.get_elements()
         --- Obtener los fluidos
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- Todos los fluidos
-        if This_MOD.setting.all then
-            --- Fluidos creados con recetas
-            for _, recipe in pairs(data.raw.recipe) do
-                for _, elements in pairs({
-                    recipe.ingredients,
-                    recipe.results
-                }) do
-                    for _, element in pairs(elements) do
-                        validate(element)
-                    end
-                end
-            end
-
-            --- Fluidos creados sin recetas
-            for _, entity in pairs(GMOD.entities) do
-                repeat
-                    --- Validación
-                    if not entity.output_fluid_box then break end
-                    if entity.output_fluid_box.pipe_connections == 0 then break end
-                    if not entity.output_fluid_box.filter then break end
-                    if not entity.target_temperature then break end
-
-                    --- Renombrar variable
-                    local Name = entity.output_fluid_box.filter
-
-                    --- Guardar la temperatura
-                    local Temperatures = Output[Name] or {}
-                    Output[Name] = Temperatures
-                    Temperatures[entity.target_temperature] = true
-                until true
+        --- Fluidos tomados del suelo
+        for _, tile in pairs(data.raw.tile) do
+            if tile.fluid then
+                Output[tile.fluid] = {}
             end
         end
 
-        --- Solo los fluidos en la naturaleza
-        if not This_MOD.setting.all then
-            --- Fluidos tomados del suelo
-            for _, tile in pairs(data.raw.tile) do
-                if tile.fluid then
-                    Output[tile.fluid] = {}
-                end
-            end
-
-            --- Fluidos minables
-            for _, resource in pairs(data.raw.resource) do
-                local results = resource.minable
-                results = results and results.results or {}
-                for _, result in pairs(results) do
-                    validate(result)
-                end
+        --- Fluidos minables
+        for _, resource in pairs(data.raw.resource) do
+            local results = resource.minable
+            results = results and results.results or {}
+            for _, result in pairs(results) do
+                validate(result)
             end
         end
 
@@ -2194,6 +2157,7 @@ function This_MOD.create_tech_to_effect(space)
     --- Validación
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
+    if not This_MOD.setting.tech then return end
     if not space.coins then return end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
