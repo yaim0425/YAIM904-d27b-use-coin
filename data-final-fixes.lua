@@ -1616,7 +1616,7 @@ function This_MOD.calculate_coins()
                                         results = Recipe.results,
                                         ingredients = Recipe.ingredients,
 
-                                        value = Math:new(Recipe.energy_required)
+                                        value = Math:new(Recipe.energy_required or 0.5)
                                     }
                                 end
                             end
@@ -1686,7 +1686,7 @@ function This_MOD.calculate_coins()
                                     results = Recipe.results,
                                     ingredients = result.ingredients,
 
-                                    value = Math:new(Recipe.energy_required)
+                                    value = Math:new(Recipe.energy_required or 0.5)
                                 }
                             end
                         end
