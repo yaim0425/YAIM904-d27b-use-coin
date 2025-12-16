@@ -1600,24 +1600,26 @@ function This_MOD.calculate_coins()
                 for key, Recipe in pairs(Recipes) do
                     if validate_ingredients(Recipe.ingredients) then
                         for _, result in pairs(Recipe.results or {}) do
-                            local Names = { result.name }
+                            if not result.amount or result.amount > 0 then
+                                local Names = { result.name }
 
-                            local Temperature = result.maximum_temperature or result.temperature
-                            if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
+                                local Temperature = result.maximum_temperature or result.temperature
+                                if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
 
-                            for _, Name in pairs(Names) do
-                                if not List[Name] then
-                                    List[Name] = {
-                                        name = Recipe.name,
-                                        level = #Levels,
-                                        ignored = Recipe.ignored,
+                                for _, Name in pairs(Names) do
+                                    if not List[Name] then
+                                        List[Name] = {
+                                            name = Recipe.name,
+                                            level = #Levels,
+                                            ignored = Recipe.ignored,
 
-                                        recipe = Recipe,
-                                        results = Recipe.results,
-                                        ingredients = Recipe.ingredients,
+                                            recipe = Recipe,
+                                            results = Recipe.results,
+                                            ingredients = Recipe.ingredients,
 
-                                        value = Math:new(Recipe.energy_required or 0.5)
-                                    }
+                                            value = Math:new(Recipe.energy_required or 0.5)
+                                        }
+                                    end
                                 end
                             end
 
@@ -1669,25 +1671,27 @@ function This_MOD.calculate_coins()
             for name, Value in pairs(Values) do
                 if Value == Min then
                     for _, result in pairs(Recipes[name].results) do
-                        local Names = { result.name }
                         local Recipe = Recipes[name]
+                        if not result.amount or result.amount > 0 then
+                            local Names = { result.name }
 
-                        local Temperature = result.maximum_temperature or result.temperature
-                        if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
+                            local Temperature = result.maximum_temperature or result.temperature
+                            if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
 
-                        for _, Name in pairs(Names) do
-                            if not List[Name] then
-                                List[Name] = {
-                                    name = Recipe.name,
-                                    level = Min + 1,
-                                    ignored = Recipe.ignored,
+                            for _, Name in pairs(Names) do
+                                if not List[Name] then
+                                    List[Name] = {
+                                        name = Recipe.name,
+                                        level = Min + 1,
+                                        ignored = Recipe.ignored,
 
-                                    recipe = Recipe,
-                                    results = Recipe.results,
-                                    ingredients = result.ingredients,
+                                        recipe = Recipe,
+                                        results = Recipe.results,
+                                        ingredients = result.ingredients,
 
-                                    value = Math:new(Recipe.energy_required or 0.5)
-                                }
+                                        value = Math:new(Recipe.energy_required or 0.5)
+                                    }
+                                end
                             end
                         end
 
@@ -1750,15 +1754,12 @@ function This_MOD.calculate_coins()
                 end
 
                 --- Calcular valor por unidad
-                local Amount = 1
+                List[key] = Element.value:copy()
                 for _, Result in pairs(Element.results) do
                     if Result.name == key and Result.amount then
-                        Amount = Result.amount
+                        List[key]:div(Result.amount)
                     end
                 end
-                List[key] = Element.value:copy()
-                List[key]:div(Amount)
-                List[key].carry = nil
 
                 --- Eliminar los valores cero
                 if
