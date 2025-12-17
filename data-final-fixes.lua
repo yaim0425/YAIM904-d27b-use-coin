@@ -1326,7 +1326,6 @@ function This_MOD.calculate_coins()
                         ingredients = nil,
                         value = Math:new(0),
                     }
-                    List[Name] = 1
                 end
             end
         end
@@ -1677,7 +1676,12 @@ function This_MOD.calculate_coins()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         Levels = {}
-        for _, value in pairs(List) do
+        for xXx, value in pairs(List) do
+            if type(value) ~= "table" then
+                GMOD.var_dump("No table", xXx, value)
+            elseif not value.level then
+                GMOD.var_dump("No level", xXx, value)
+            end
             Levels[value.level] = Levels[value.level] or {}
             table.insert(Levels[value.level], value)
         end
