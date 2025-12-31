@@ -1,14 +1,14 @@
 {
-  "name": "YAIM0425-d27b-use-coin",
+  "name": "YAIM904-d27b-use-coin",
   "version": "0.0.1",
-  "title": "YAIM0425 d27b Use coin",
-  "author": "YAIM0425",
+  "title": "YAIM904 d27b Use coin",
+  "author": "YAIM904",
   "factorio_version": "2.0",
   "description": "Create and use coins to craft the items you want. [[I accept suggestions]]",
-  "homepage": "https://github.com/yaim0425/YAIM0425-d27b-use-coin",
+  "homepage": "https://github.com/yaim0425/YAIM904-d27b-use-coin",
   "dependencies": [
-    "YAIM0425-d00b-core",
-    "? YAIM0425-d12b-compactors",
-    "? YAIM0425-d13b-compacted-update"
+    "YAIM904-d00b-core",
+    "? YAIM904-d12b-compactors",
+    "? YAIM904-d13b-compacted-update"
   ]
 }
