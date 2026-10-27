@@ -1948,7 +1948,7 @@ function This_MOD.create_recipe_to_change_coins()
 
         Recipe.name = Name
         Recipe.localised_name = { "", { "item-name.coin" } }
-        Recipe.category = This_MOD.prefix .. space.action
+        Recipe.categories = { This_MOD.prefix .. space.action }
         Recipe.subgroup = "intermediate-product"
         Recipe.order = "z[" .. space.order .. "]"
         Recipe.enabled = true
@@ -2072,7 +2072,7 @@ function This_MOD.create_recipe_to_effect(space)
         Recipe.name = space[action]
         Recipe.energy_required = 0.002
         Recipe.order = space.element.order
-        Recipe.category = This_MOD.prefix .. action
+        Recipe.categories = { This_MOD.prefix .. action }
         Recipe.localised_name = space.element.localised_name
         Recipe.icons = GMOD.copy(space.element.icons)
 
