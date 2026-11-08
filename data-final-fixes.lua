@@ -28,34 +28,35 @@ function This_MOD.start()
     --- Modificar los elementos
     for _, spaces in pairs(This_MOD.to_be_processed) do
         for _, space in pairs(spaces) do
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
             --- Crear los elementos
             This_MOD.create_item(space)
             This_MOD.create_entity(space)
             This_MOD.create_recipe(space)
 
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         end
     end
 
     --- Recetas de conversión
     This_MOD.get_elements_to_effect()
-    This_MOD.calculate_coins()
+    This_MOD.calculate_prices()
     This_MOD.create_coins()
     This_MOD.create_recipe_to_change_coins()
-    This_MOD.create_recipe_categories()
+    This_MOD.add_category()
 
     --- Modificar los elementos
-    for _, spaces in pairs(This_MOD.to_be_processed) do
+    This_MOD.create_spaces()
+    for _, spaces in pairs(This_MOD.to_be_processed.spaces) do
         for _, space in pairs(spaces) do
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
             --- Crear los elementos
-            This_MOD.create_recipe_to_effect(space)
-            This_MOD.create_tech_to_effect(space)
+            This_MOD.create_recipe_to_elements(space)
+            This_MOD.create_tech_to_element(space)
 
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         end
     end
 
@@ -75,7 +76,7 @@ function This_MOD.reference_values()
     This_MOD.to_be_processed = {}
 
     --- Maximo valor de referencia
-    This_MOD.value_maximo = nil
+    This_MOD.maximo = nil
 
     --- Validar si se cargó antes
     if This_MOD.setting then return end
@@ -136,9 +137,6 @@ function This_MOD.reference_values()
         results = {}
     }
 
-    --- Valor para objetos sin recetas
-    This_MOD.value_default = 0.5
-
     --- Nombre de la moneda
     This_MOD.coin_name = This_MOD.prefix .. "coin"
 
@@ -149,12 +147,8 @@ function This_MOD.reference_values()
     This_MOD.Units = "1kMGTPEZY"
 
     --- Elementos a ignorar
-    This_MOD.ignore_items = {
-        ["blueprint"] = true,
-        ["blueprint-book"] = true,
-        ["upgrade-planner"] = true,
-        ["spidertron-remote"] = true,
-        ["deconstruction-planner"] = true
+    This_MOD.ignore_recipes = {
+        ["YAIM904-A00A-market"] = true
     }
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -181,7 +175,7 @@ function This_MOD.get_elements()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         --- Validar valores de referencia
-        if GMOD.entities[This_MOD.new_entity_name] then return end
+        if GMOD.entity[This_MOD.new_entity_name] then return end
 
         --- Validar la entity
         if not entity then return end
@@ -206,6 +200,10 @@ function This_MOD.get_elements()
         Space.recipe = GMOD.recipes[Space.item.name]
         Space.recipe = Space.recipe and Space.recipe[1] or nil
 
+        for key, value in pairs(Space) do
+            Space[key] = GMOD.copy_with_format(value)
+        end
+
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
@@ -229,114 +227,14 @@ function This_MOD.get_elements()
 
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Fluidos a afectar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local function get_fluids()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Variable a usar
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Output = {}
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Validar el fluido
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local function validate(element)
-            if element.type ~= "fluid" then return end
-
-            local Temperatures = Output[element.name] or {}
-            Output[element.name] = Temperatures
-
-            if element.maximum_temperature then
-                Temperatures[element.maximum_temperature] = true
-            elseif element.temperature then
-                Temperatures[element.temperature] = true
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Obtener los fluidos
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        --- Fluidos tomados del suelo
-        for _, tile in pairs(data.raw.tile) do
-            if tile.fluid then
-                Output[tile.fluid] = {}
-            end
-        end
-
-        --- Fluidos minables
-        for _, resource in pairs(data.raw.resource) do
-            local results = resource.minable
-            results = results and results.results or {}
-            for _, result in pairs(results) do
-                validate(result)
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Dar el formato deseado
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for fluid_name, temperatures in pairs(Output) do
-            if not GMOD.get_length(temperatures) then
-                Output[fluid_name] = false
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Devolver el resultado
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        return Output
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Valores a afectar
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     --- Entidad que se va a duplicar
     validate_entity(
-        GMOD.items[This_MOD.old_entity_name],
-        GMOD.entities[This_MOD.old_entity_name]
+        GMOD.item[This_MOD.old_entity_name],
+        GMOD.entity[This_MOD.old_entity_name]
     )
-
-    --- Fluidos a afectar
-    This_MOD.fluids = get_fluids()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
@@ -379,8 +277,7 @@ function This_MOD.create_item(space)
     Item.localised_name = This_MOD.new_localised_name
 
     --- Actualizar el order
-    local Order = tonumber(Item.order) + 1
-    Item.order = GMOD.pad_left_zeros(#Item.order, Order)
+    Item.order = Item.order .. "-05"
 
     --- Agregar indicador del MOD
     table.insert(Item.icons, This_MOD.indicator_bg)
@@ -440,11 +337,7 @@ function This_MOD.create_entity(space)
     Entity.localised_name = This_MOD.new_localised_name
 
     --- Objeto a minar
-    Entity.minable.results = { {
-        type = "item",
-        name = This_MOD.new_entity_name,
-        amount = 1
-    } }
+    Entity.minable.results[1].name = This_MOD.new_entity_name
 
     --- Elimnar propiedades inecesarias
     Entity.fast_replaceable_group = nil
@@ -527,11 +420,7 @@ function This_MOD.create_recipe(space)
     Recipe.ingredients = {}
 
     --- Resultados
-    Recipe.results = { {
-        type = "item",
-        name = This_MOD.new_entity_name,
-        amount = 1
-    } }
+    Recipe.results[1].name = This_MOD.new_entity_name
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -684,7 +573,7 @@ function Math:validate()
 end
 
 function Math:copy()
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local New_math = self:new()
     New_math:set(self)
@@ -913,22 +802,22 @@ function Math:add(num)
 end
 
 function Math:mult(num)
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     if type(num) ~= "number" then return end
     if not self:validate() then return end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Multiplicar cada bloque
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local Carry = 0
 
@@ -943,15 +832,15 @@ function Math:mult(num)
 
     if Carry > 0 then table.insert(self.value, Carry) end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Devolver el resultado
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     return GMOD.copy(self.value)
 
@@ -959,22 +848,22 @@ function Math:mult(num)
 end
 
 function Math:div(num)
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     if type(num) ~= "number" then return end
     if not self:validate() then return end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Dividir cada bloque
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     self.carry = 0
 
@@ -987,15 +876,15 @@ function Math:div(num)
         end
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Limpiar el resultado
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     while #self.value > 1 do
         local Last = self.value[#self.value]
@@ -1008,15 +897,15 @@ function Math:div(num)
         table.insert(self.value, 0)
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Devolver el resultado
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     return GMOD.copy(self.value), self.carry
 
@@ -1024,9 +913,9 @@ function Math:div(num)
 end
 
 function Math:greater_than(num)
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     if type(num) == "number" then
         local TMP = self:new()
@@ -1037,28 +926,28 @@ function Math:greater_than(num)
     if not num:validate() then return end
     if not self:validate() then return end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Comparar la longitud
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     if #num.value > #self.value then return false end
     if #num.value < #self.value then return true end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Comparar cada bloque
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local Return = false
 
@@ -1074,15 +963,15 @@ function Math:greater_than(num)
         end
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Devolver el resultado
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     return Return
 
@@ -1101,50 +990,43 @@ end
 
 function This_MOD.get_elements_to_effect()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Variables a usar
+    --- Funciones auxiliares
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    This_MOD.to_be_processed = {}
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Evaluar cada element
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local function get_elements(element)
+    local function get_items()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Validación
+        --- Variable a usar
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- Elementos a ignorar
-        if GMOD.has_id(element.name, "A00A") then return end
-        if This_MOD.ignore_items[element.name] then return end
-        if element.type ~= "fluid" and not element.subgroup then return end
+        local Output = {}
 
-        --- Validar si ya fue procesado
-        local That_MOD =
-            GMOD.get_id_and_name(element.name) or
-            { ids = "-", name = element.name }
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        local Effects = {}
-        for action, _ in pairs(This_MOD.actions) do
-            local Recipe_name =
-                GMOD.name .. That_MOD.ids ..
-                This_MOD.id .. "-" ..
-                action .. "-" ..
-                That_MOD.name
 
-            table.insert(Effects, {
-                type = "unlock-recipe",
-                recipe = Recipe_name
-            })
 
-            if data.raw.recipe[Recipe_name] then return end
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Objectos minables
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, resource in pairs(data.raw.resource) do
+            local mining_time = resource.minable.mining_time
+            resource = GMOD.get_format_minable(resource or {})
+            for _, result in pairs(resource or {}) do
+                repeat
+                    if result.type ~= "item" then break end
+                    local Item = GMOD.item[result.name]
+                    if not Item then break end
+                    local energy_required = Output[result.name]
+                    if
+                        not energy_required or
+                        (energy_required and energy_required < mining_time)
+                    then
+                        Output[result.name] = mining_time
+                    end
+                until true
+            end
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1154,119 +1036,20 @@ function This_MOD.get_elements_to_effect()
 
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Guardar la información
+        --- Devolver el resultado
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        local Space = {}
-        Space.name =
-            GMOD.name .. That_MOD.ids ..
-            This_MOD.id .. "-" ..
-            That_MOD.name
-
-        Space.element = element
-        Space.type = element.type == "fluid" and "fluid" or "item"
-
-        Space.effects = Effects
-        Space.sell = Effects[1].recipe
-        Space.buy = Effects[2].recipe
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Guardar la información
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        This_MOD.to_be_processed[element.type] = This_MOD.to_be_processed[element.type] or {}
-        This_MOD.to_be_processed[element.type][element.name] = Space
+        return Output
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Buscar los elements a afectar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    for _, recipe in pairs(data.raw.recipe) do
-        repeat
-            if not recipe.ingredients then break end
-            if #recipe.ingredients > 0 then break end
-
-            if not recipe.results then break end
-            if #recipe.results ~= 1 then break end
-
-            if recipe.results[1].type ~= "item" then break end
-
-            This_MOD.ignore_items[recipe.results[1].name] = true
-        until true
-    end
-
-    for _, elements in pairs({ GMOD.items, GMOD.fluids }) do
-        for _, element in pairs(elements) do
-            get_elements(element)
-        end
-    end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-end
-
-function This_MOD.calculate_coins()
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Variables a usar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local List = {}    --- Lista de item/fluid base para calcular
-    local Levels = {}  --- Recetas clasificadas por niveles
-    local Recipes = {} --- Listado de todas las recetas a ordernar
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Elementos del nivel cero
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local function get_fluids()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Variable de salida
+        --- Variable a usar
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        local Return = {}
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Validar el fluido
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local function validate(element)
-            if element.type ~= "fluid" then return end
-
-            local Temperatures = Return[element.name] or {}
-            Return[element.name] = Temperatures
-
-            if element.maximum_temperature then
-                Temperatures[element.maximum_temperature] = true
-            elseif element.temperature then
-                Temperatures[element.temperature] = true
-            end
-        end
+        local Output = {}
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -1281,15 +1064,28 @@ function This_MOD.calculate_coins()
         --- Fluidos tomados del suelo
         for _, tile in pairs(data.raw.tile) do
             if tile.fluid then
-                Return[tile.fluid] = {}
+                Output[tile.fluid] = Output[tile.fluid] or 1
             end
         end
 
         --- Fluidos minables
         for _, resource in pairs(data.raw.resource) do
-            if resource.minable then
-                for _, result in pairs(resource.minable.results or {}) do
-                    validate(result)
+            local mining_time = resource.minable.mining_time
+            resource = GMOD.get_format_minable(resource or {})
+            for _, result in pairs(resource or {}) do
+                if result.type == "fluid" then
+                    Output[result.name] = Output[result.name] or {}
+                    if result.temperature then
+                        local energy_required = Output[result.name][result.temperature]
+                        if
+                            not energy_required or
+                            (energy_required and energy_required < mining_time)
+                        then
+                            Output[result.name][result.temperature] = mining_time
+                        end
+                    else
+                        Output[result.name].mining_time = mining_time
+                    end
                 end
             end
         end
@@ -1304,544 +1100,603 @@ function This_MOD.calculate_coins()
         --- Dar el formato deseado
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        for name, temperatures in pairs(Return) do
-            List[name] = {
-                name = nil,
-                level = 1,
-                recipe = nil,
-                results = { { name = name } },
-                ingredients = nil,
-                value = Math:new(0),
-            }
-
-            if GMOD.get_length(temperatures) then
-                Levels[1][name] = Levels[1][name] or {}
-                for temperature, _ in pairs(temperatures) do
-                    local Name = name .. "|" .. temperature
-                    Levels[1][Name] = { results = { { name = name, temperature = temperature } } }
-                    List[Name] = {
-                        name = nil,
-                        level = 1,
-                        recipe = nil,
-                        results = { { name = name, temperature = temperature } },
-                        ingredients = nil,
-                        value = Math:new(0),
-                    }
-                end
+        for fluid_name, temperatures in pairs(Output) do
+            if
+                GMOD.get_length(temperatures) == 1 and
+                temperatures.mining_time
+            then
+                Output[fluid_name] = temperatures.mining_time
             end
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
 
-    local function get_resource()
+
+
+
+
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Objectos minables
+        --- Devolver el resultado
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        for _, element in pairs(data.raw.resource) do
-            if element.minable then
-                for _, result in pairs(element.minable.results or {}) do
-                    repeat
-                        if result.type ~= "item" then break end
-                        if not GMOD.items[result.name] then break end
-                        Levels[1][result.name] = { results = { { name = result.name } } }
-                        List[result.name] = {
-                            name = nil,
-                            level = 1,
-                            recipe = nil,
-                            results = { { name = result.name } },
-                            ingredients = nil,
-                            value = Math:new(0),
-                        }
-                    until true
-                end
-            end
-        end
+        return Output
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    local function get_fluid_producers()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function format_result(result)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Valores base
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        for _, groups in pairs(data.raw) do
-            for _, entity in pairs(groups) do
-                repeat
-                    --- Validación
-                    if not entity.output_fluid_box then break end
-                    if entity.output_fluid_box.pipe_connections == 0 then break end
-                    if not entity.output_fluid_box.filter then break end
-
-                    if not entity.fluid_box then break end
-                    if entity.fluid_box.pipe_connections == 0 then break end
-                    if not entity.fluid_box.filter then break end
-
-                    --- Renombrar variable
-                    local Output = entity.output_fluid_box.filter
-                    local Input = entity.fluid_box.filter
-                    local Temperature = entity.target_temperature or entity.output_fluid_box.temperature
-
-                    if Temperature and Temperature == data.raw.fluid[Output].default_temperature then
-                        Temperature = nil
-                    end
-
-                    --- Guardar la temperatura
-                    Recipes[entity.name] = {
-                        ignored = true,
-                        ingredients = { { type = "fluid", name = Input } },
-                        results = { { type = "fluid", name = Output, temperature = Temperature } }
-                    }
-                until true
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
-
-    local function get_environment_items()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Tipos a buscar
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Allowed_types = {
-            ["tree"] = true,
-            ["simple-entity"] = true,
-            ["simple-entity-with-force"] = true,
-            ["simple-entity-with-owner"] = true,
-            ["resource"] = true,
-            ["fish"] = true,
+        local Output = {
+            type = result.type,
+            name = result.name,
+            amount = result.amount,
+            temperature = result.temperature
         }
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
-
-
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Buscar los objetos
+        --- Validación
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        for type, _ in pairs(Allowed_types) do
-            for _, prototype in pairs(data.raw[type] or {}) do
-                local Minable = prototype.minable
-                if Minable then
-                    local Results = Minable.results
-                    if Minable.result then
-                        Results = { { name = Minable.result } }
-                    end
-
-                    for _, result in pairs(Results or {}) do
-                        Levels[1][result.name] = { results = { { name = result.name } } }
-                        List[result.name] = {
-                            name = nil,
-                            level = 1,
-                            recipe = nil,
-                            results = { { name = result.name } },
-                            ingredients = nil,
-                            value = Math:new(0),
-                        }
-                    end
-                end
+        if result.amount_min then
+            if result.amount_min == result.amount_max then
+                Output.amount = result.amount_min
+            else
+                Output.amount_min = result.amount_min
+                Output.amount_max = result.amount_max
             end
         end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Devolver resultado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        return Output
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    local function get_items_without_recipes()
+    local function validate_recipe(recipe)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Variables a usar
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        local Items = {}
-
+        --- Validación
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
+        if not recipe.results then return end
+        if #recipe.results == 0 then return end
+        if not recipe.ingredients then return end
+        if This_MOD.ignore_recipes[recipe.name] then return end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
 
 
 
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Cargar los objetos existentes
+        --- Duplicar los valores
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        for _, elements in pairs(data.raw) do
+        recipe = GMOD.copy(recipe)
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Dar formato esperado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for i, result in pairs(recipe.results) do
+            recipe.results[i] = format_result(result)
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Devolver el resultado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        return {
+            type = recipe.type,
+            name = recipe.name,
+            energy_required = recipe.energy_required or 0.5,
+            ingredients = recipe.ingredients,
+            results = recipe.results,
+        }
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function get_recipes()
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Variable a usar
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Output = {}
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validar las recetas
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, recipes in pairs(GMOD.recipes) do
+            for _, recipe in pairs(recipes) do
+                Output[recipe.name] = validate_recipe(recipe)
+            end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Devolver el resultado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        return Output
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function boiler_recipe(boiler)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validación
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        if not boiler.fluid_box then return end
+        if not boiler.fluid_box.filter then return end
+        if not boiler.output_fluid_box then return end
+        if not boiler.output_fluid_box.filter then return end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Renombrar
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Recipe = This_MOD.to_be_processed.affected.recipe
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Formato deseado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        Recipe["entity" .. " " .. boiler.name] = {
+            name = "entity" .. " " .. boiler.name,
+            energy_required = 1,
+
+            ingredients = { {
+                type = "fluid",
+                name = boiler.fluid_box.filter,
+                amount = 1,
+            } },
+
+            results = { {
+                type = "fluid",
+                name = boiler.output_fluid_box.filter,
+                amount = 1,
+                temperature = boiler.target_temperature,
+            } }
+        }
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Buscar los elements a afectar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    This_MOD.to_be_processed = {}
+
+    This_MOD.to_be_processed.affected = {
+        item = get_items(),
+        fluid = get_fluids(),
+        recipe = get_recipes()
+    }
+
+    for _, entity in pairs(GMOD.entity) do
+        boiler_recipe(entity)
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+function This_MOD.calculate_prices()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Renombrar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    This_MOD.to_be_processed.prices = { item = {}, fluid = {} }
+
+    local Prices = This_MOD.to_be_processed.prices
+    local Recipes = This_MOD.to_be_processed.affected.recipe
+
+    local Recipe = GMOD.copy(Recipes)
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Funciones auxiliares
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function get_full_name(element)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Renombrar
+        local name = element.name
+
+        --- No hay termperaturas
+        if not (
+                element.temperature or
+                element.minimum_temperature or
+                element.maximum_temperature
+            ) then
+            return name
+        end
+
+        --- Con temperatura
+        if type(element.temperature) == "number" then
+            return name .. " t " .. element.temperature
+        end
+
+        --- Con rango de termperaturas
+        if element.minimum_temperature or element.maximum_temperature then
+            element = GMOD.get_temperature(element)
+        end
+
+        --- Resultado
+        return name .. " t " .. element.min .. " " .. element.max
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    local function validate_range(ingredient)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validación
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        if ingredient.type ~= "fluid" then return end
+        local Full_name = get_full_name(ingredient)
+        if Prices.fluid[Full_name] then return end
+
+        --- No hay termperaturas
+        if not (
+                ingredient.temperature or
+                ingredient.minimum_temperature or
+                ingredient.maximum_temperature
+            )
+        then
+            return
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Valores a evaluar
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Fluid = GMOD.fluid[ingredient.name]
+        if not ingredient.maximum_temperature then
+            ingredient.maximum_temperature = Fluid.maximum_temperature or Fluid.default_temperature
+        end
+        if not ingredient.minimum_temperature then
+            ingredient.minimum_temperature = Fluid.default_temperature
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Buscar el precio
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Values = {}
+        local TMP = {}
+        local Temperature = GMOD.get_temperature(ingredient)
+        for i = Temperature.min, Temperature.max, 1 do
+            local name = ingredient.name .. "-t" .. i
+            if Prices.fluid[name] then
+                table.insert(Values, Prices.fluid[name])
+                table.insert(TMP, name)
+            end
+        end
+
+        local Actual = Math:new()
+        for _, precie in pairs(Values) do
+            if precie:greater_than(Actual) then
+                Actual = precie:copy()
+            end
+        end
+
+        --- Precio final
+        local Value = #Values > 0 and Actual or false
+        if Value then Prices.fluid[Full_name] = Value end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear los spacios
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for _, recipe in pairs(Recipe) do
+        for _, elements in pairs({ recipe.results, recipe.ingredients }) do
             for _, element in pairs(elements) do
-                if element.stack_size then
-                    Items[element.name] = true
+                Prices[element.type] = Prices[element.type] or {}
+
+                if element.type == "item" then
+                    Prices[element.type][element.name] = false
+                end
+
+                if element.type == "fluid" then
+                    Prices[element.type][get_full_name(element)] = false
+                    Prices[element.type][element.name] = false
                 end
             end
         end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Eliminar los objetos con recetas
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for _, recipe in pairs(data.raw.recipe) do
-            --- Eliminar objetos con recetas
-            for _, result in pairs(recipe.results or {}) do
-                if result.type == "item" then
-                    Items[result.name] = nil
-                end
-            end
-
-            --- Enlistar las recetas
-            if
-                (recipe.ingredients and recipe.results) and
-                (#recipe.ingredients > 0 or #recipe.results > 0)
-            then
-                Recipes[recipe.name] = recipe
-            end
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Guardar el resultado
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        for name, _ in pairs(Items) do
-            Levels[1][name] = { results = { { name = name } } }
-            List[name] = {
-                name = nil,
-                level = 1,
-                recipe = nil,
-                results = { { name = name } },
-                ingredients = nil,
-                value = Math:new(0),
-            }
-        end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function validate_ingredients(ingredients)
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        for _, ingredient in pairs(ingredients or {}) do
-            local Name = ingredient.name
 
-            if ingredient.temperature then
-                Name = Name .. "|" .. ingredient.temperature
-            end
 
-            if not List[Name] then
-                return
-            end
-        end
 
-        return true
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    ---Valores iniciales
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    for name, value in pairs(This_MOD.to_be_processed.affected.item) do
+        Prices.item[name] = Math:new(value)
     end
 
-    local function calculate_coins()
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Procesar las recetas
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        while GMOD.get_length(Recipes) do
-            --- Recorrer las recetas
-            while GMOD.get_length(Recipes) do
-                local Level = {}
-                table.insert(Levels, Level)
-
-                for key, Recipe in pairs(Recipes) do
-                    if validate_ingredients(Recipe.ingredients) then
-                        for _, result in pairs(Recipe.results or {}) do
-                            if not result.amount or result.amount > 0 then
-                                local Names = { result.name }
-
-                                local Temperature = result.maximum_temperature or result.temperature
-                                if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
-
-                                for _, Name in pairs(Names) do
-                                    if not List[Name] then
-                                        List[Name] = {
-                                            name = Recipe.name,
-                                            level = #Levels,
-                                            ignored = Recipe.ignored,
-
-                                            recipe = Recipe,
-                                            results = Recipe.results,
-                                            ingredients = Recipe.ingredients,
-
-                                            value = Math:new(Recipe.energy_required or 0.5)
-                                        }
-                                    end
-                                end
-                            end
-
-                            Recipes[key] = nil
-                            if not Recipe.ignored then
-                                Level[Recipe.name] = Recipe
-                            end
-                        end
-                    end
-                end
-
-                if not GMOD.get_length(Level) then
-                    table.remove(Levels, #Levels)
-                    break
-                end
-            end
-
-            --- Procesar las recetas sin evaluar
-            local Values = {}
-            for _, Recipe in pairs(Recipes) do
-                Values[Recipe.name] = Values[Recipe.name] or {}
-                for _, ingredient in pairs(Recipe.ingredients) do
-                    local Name = ingredient.name
-                    if ingredient.temperature then
-                        Name = Name .. "|" .. ingredient.temperature
-                    end
-                    table.insert(Values[Recipe.name], (List[Name] or {}).level or 1)
-                end
-                Values[Recipe.name] = (function()
-                    local Max = 0
-                    for _, Value in pairs(Values[Recipe.name]) do
-                        if Value > Max then
-                            Max = Value
-                        end
-                    end
-                    return Max
-                end)()
-            end
-
-            --- Buscar el nivel más bajo
-            local Min = math.huge
-            for _, Value in pairs(Values) do
-                if Value < Min then
-                    Min = Value
-                end
-            end
-
-            --- Agregar la receta al nivel
-            for name, Value in pairs(Values) do
-                if Value == Min then
-                    for _, result in pairs(Recipes[name].results) do
-                        local Recipe = Recipes[name]
-                        if not result.amount or result.amount > 0 then
-                            local Names = { result.name }
-
-                            local Temperature = result.maximum_temperature or result.temperature
-                            if Temperature then table.insert(Names, result.name .. "|" .. Temperature) end
-
-                            for _, Name in pairs(Names) do
-                                if not List[Name] then
-                                    List[Name] = {
-                                        name = Recipe.name,
-                                        level = Min + 1,
-                                        ignored = Recipe.ignored,
-
-                                        recipe = Recipe,
-                                        results = Recipe.results,
-                                        ingredients = result.ingredients,
-
-                                        value = Math:new(Recipe.energy_required or 0.5)
-                                    }
-                                end
-                            end
-                        end
-
-                        if not Levels[Min + 1] then Levels[Min + 1] = {} end
-                        Levels[Min + 1][Recipe.name] = Recipe
-                    end
-                    Recipes[name] = nil
-                end
-            end
+    for fluid, temperatures in pairs(This_MOD.to_be_processed.affected.fluid) do
+        for temperature, value in pairs(
+            type(temperatures) == "number" and
+            { [false] = temperatures } or temperatures
+        ) do
+            local Value = Math:new(value)
+            Prices.fluid[get_full_name({
+                name = fluid,
+                temperature = temperature
+            })] = Value
         end
+    end
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Crear el oreden para calcular el valor
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        Levels = {}
-        for xXx, value in pairs(List) do
-            if type(value) ~= "table" then
-                GMOD.var_dump("No table", xXx, value)
-            elseif not value.level then
-                GMOD.var_dump("No level", xXx, value)
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Evaluar las recets
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    repeat
+        --- Contenedor
+        local Price = {}
+        local Valid = {}
+
+        --- Recetas que se puedden evaluar
+        for _, recipe in pairs(Recipe) do
+            local Found = true
+            for _, ingredient in pairs(recipe.ingredients) do
+                validate_range(ingredient)
+                Found = Prices[ingredient.type][get_full_name(ingredient)] and true or false
+                if not Found then break end
             end
-            Levels[value.level] = Levels[value.level] or {}
-            table.insert(Levels[value.level], value)
-        end
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Calcular los valores
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        --- Calcular el valor de las recetas
-        for _, Level in pairs(Levels) do
-            for _, Element in pairs(Level) do
-                for _, ingredient in pairs(Element.ingredients or {}) do
-                    local Value = List[ingredient.name]
-                    if Value then
-                        Value = Value.value:copy()
-                        Value:mult(ingredient.amount)
-                        Element.value:add(Value)
-                    end
-                end
-                Element.ingredients = nil
-            end
-        end
-
-        --- Calcular el valor de cada item/fluid
-        for key, Element in pairs(List) do
-            repeat
-                --- Eliminar el nuvel 1
-                if Element.level == 1 then
-                    List[key] = nil
-                    break
-                end
-
-                --- Calcular valor por unidad
-                List[key] = Element.value:copy()
-                for _, Result in pairs(Element.results) do
-                    if Result.name == key and Result.amount then
-                        List[key]:div(Result.amount)
-                    end
-                end
-
-                --- Eliminar los valores cero
+            for _, result in pairs(Found and recipe.results or {}) do
+                local Full_name = get_full_name(result)
+                Valid[result.type] = Valid[result.type] or {}
+                Valid[result.type][Full_name] = Valid[result.type][Full_name] or {}
+                table.insert(Valid[result.type][Full_name], recipe.name)
                 if
-                    #List[key].value == 3 and
-                    List[key].value[1] == 0 and
-                    List[key].value[3] == 0
+                    result.type == "fluid" and
+                    type(Prices.fluid[result.name]) == "boolean"
                 then
-                    List[key] = nil
-                    break
+                    Valid.fluid[result.name] = Valid.fluid[result.name] or {}
+                    table.insert(Valid.fluid[result.name], recipe.name)
                 end
-            until true
+            end
         end
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    end
+        for _, types in pairs(Valid) do
+            for _, names in pairs(types) do
+                for _, name in pairs(names) do
+                    if not Price[name] then
+                        Price[name] = Math:new()
+                        for _, ingredient in pairs(Recipe[name].ingredients) do
+                            local Number = Prices[ingredient.type][get_full_name(ingredient)]:copy()
+                            Number:mult(ingredient.amount)
+                            Price[name]:add(Number)
+                        end
+                        Price[name]:add(Recipe[name].energy_required)
+                    end
+                end
+            end
+        end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Precio por resultado
+        for result_type, elements in pairs(Valid) do
+            for result_name, names in pairs(elements) do
+                for _, name in pairs(names) do
+                    Recipe[name] = nil
+                end
 
+                if not Prices[result_type][result_name] then
+                    local Actual = Math:new()
 
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Valores a afectar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    --- Inicializar los contenedores
-    Levels = { [1] = {} }
-
-    --- Elementos del nivel cero
-    get_fluids()
-    get_resource()
-    get_fluid_producers()
-    get_environment_items()
-    get_items_without_recipes()
-
-    calculate_coins()
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Calcular el valor de los afectados
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    for _, spaces in pairs(This_MOD.to_be_processed) do
-        for _, space in pairs(spaces) do
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-            --- Valor del elemento
-            local Value = List[space.element.name]
-            if Value then
-                --- Convertir el valor en monedas
-                space.coins = {}
-                for action, value in pairs(This_MOD.actions) do
-                    --- Contenedor de salida
-                    space.coins[action] = {}
-
-                    --- Convertir en el formato
-                    local Coins = Value:copy()
-                    if This_MOD.actions.sell == value then Coins:div(2) end
-                    for i, num in pairs(Coins:finish()) do
-                        if num >= 0 then
-                            table.insert(space.coins[action], {
-                                type = "item",
-                                amount = num,
-                                name = This_MOD.coin_name .. "-" .. i,
-                                ignored_by_productivity = 0,
-                                ignored_by_stats = num
-                            })
+                    local Recipe_name = ""
+                    for _, name in pairs(names) do
+                        if Price[name]:greater_than(Actual) then
+                            Actual = Price[name]:copy()
+                            Recipe_name = name
                         end
                     end
 
-                    --- Eliminar contenedor vacio
-                    if #space.coins[action] == 0 then
-                        space.coins[action] = nil
+                    local Amount = 0
+                    for _, result in pairs(Recipes[Recipe_name].results) do
+                        local Full_name = get_full_name(result)
+                        if Full_name == result_name then
+                            Amount = result.amount
+                            break
+                        end
                     end
-                end
 
-                --- Eliminar contenedor vacio
-                if not GMOD.get_length(space.coins) then
-                    space.coins = nil
-                end
-
-                --- Guardar el maximo valor a usar
-                if not This_MOD.value_maximo then
-                    This_MOD.value_maximo = Math:new(0)
-                end
-
-                --- Referencia del numero más grande
-                if Value:greater_than(This_MOD.value_maximo) then
-                    This_MOD.value_maximo = Value
+                    Actual:div(Amount)
+                    Prices[result_type][result_name] = Actual
+                    Actual.recipe = Recipe_name
                 end
             end
+        end
 
-            --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        if not GMOD.get_length(Valid) then break end
+    until false
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Elimnar los fluidos y objetos sin precios
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for _, elements in pairs(Prices) do
+        local Delete = {}
+
+        for name, element in pairs(elements) do
+            if not element then
+                table.insert(Delete, name)
+            else
+                elements[name] = {
+                    price = element:finish(),
+                    recipe = element.recipe,
+                    segments = #element.value - 2,
+                }
+                if
+                    #elements[name].price == 0 or (
+                        #elements[name].price == 1 and (
+                            elements[name].price[1] and
+                            elements[name].price[1] == 0
+                        )
+                    )
+                then
+                    table.insert(Delete, name)
+                end
+            end
+        end
+
+        for _, name in ipairs(Delete) do
+            elements[name] = nil
         end
     end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
+---------------------------------------------------------------------------------------------------
+
 function This_MOD.create_coins()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Precio más alto
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if not This_MOD.value_maximo then return end
-    This_MOD.value_maximo.coins = This_MOD.value_maximo:finish()
-    for i = 1, #This_MOD.value_maximo.coins, 1 do
-        if not GMOD.items[This_MOD.coin_name .. "-" .. i] then
+    This_MOD.maximo = { segments = 0 }
+
+    for _, elements in pairs(This_MOD.to_be_processed.prices) do
+        for _, element in pairs(elements) do
+            if This_MOD.maximo.segments < element.segments then
+                This_MOD.maximo = element
+            end
+        end
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    if not This_MOD.maximo.price then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear las monedas
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for i = 1, This_MOD.maximo.segments, 1 do
+        if not GMOD.item[This_MOD.coin_name .. "-" .. i] then
             --- Prefijo
-            local Char = i > #This_MOD.Units and tostring(i) or This_MOD.Units:sub(i, i)
+            local Char = i > #This_MOD.Units and tostring(i) or
+                string.upper(This_MOD.Units:sub(i, i))
 
             --- item
             local Coin = {
@@ -1867,7 +1722,7 @@ function This_MOD.create_coins()
                 --- Agregar el prefijo
                 if i <= #This_MOD.Units then
                     table.insert(Icons, {
-                        icon = GMOD.signal[string.upper(Char)],
+                        icon = GMOD.signal[Char],
                         shift = { 8, -8 },
                         scale = 0.25
                     })
@@ -1901,21 +1756,21 @@ function This_MOD.create_coins()
 end
 
 function This_MOD.create_recipe_to_change_coins()
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    if not This_MOD.value_maximo then return end
+    if not This_MOD.maximo then return end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Recetas para intercambiar las monedas
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     local function recipes_to_coins(space)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -1948,7 +1803,7 @@ function This_MOD.create_recipe_to_change_coins()
 
         Recipe.name = Name
         Recipe.localised_name = { "", { "item-name.coin" } }
-        Recipe.categories = { This_MOD.prefix .. space.action }
+        Recipe.category = This_MOD.prefix .. space.action
         Recipe.subgroup = "intermediate-product"
         Recipe.order = "z[" .. space.order .. "]"
         Recipe.enabled = true
@@ -1994,24 +1849,25 @@ function This_MOD.create_recipe_to_change_coins()
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Recorrer las monedas necesarias
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    for N = 2, #This_MOD.value_maximo.coins, 1 do
+    for segment = 2, This_MOD.maximo.segments, 1 do
         for action, value in pairs(This_MOD.actions) do
             recipes_to_coins({
-                order = GMOD.pad_left_zeros(3, N) .. (value == This_MOD.actions.sell and 0 or 1),
+                order = GMOD.pad_left_zeros(3, segment) ..
+                    (value == This_MOD.actions.sell and 0 or 1),
                 value = value,
                 action = action,
-                char_up = N,
-                char_down = N - 1
+                char_up = segment,
+                char_down = segment - 1
             })
         end
     end
@@ -2019,10 +1875,13 @@ function This_MOD.create_recipe_to_change_coins()
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function This_MOD.create_recipe_categories()
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+function This_MOD.add_category()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Crear categoria y agrega a la maquita
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local Category = GMOD.entities[This_MOD.new_entity_name].crafting_categories
+    local Category = GMOD.entity[This_MOD.new_entity_name].crafting_categories
+
     for action, _ in pairs(This_MOD.actions) do
         local Name = This_MOD.prefix .. action
         if GMOD.get_key(Category, Name) then return end
@@ -2030,56 +1889,236 @@ function This_MOD.create_recipe_categories()
         table.insert(Category, Name)
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function This_MOD.create_recipe_to_effect(space)
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+---------------------------------------------------------------------------------------------------
+
+function This_MOD.create_spaces()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Variables a usar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    This_MOD.to_be_processed.spaces = {}
+    local Spaces = This_MOD.to_be_processed.spaces
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Evaluar cada element
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function create_space(space)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Procesar el nombre
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Fragmentar el nombre
+        local Parts = GMOD.split(space.name)
+        if #Parts == 0 then return end
+
+        --- Nombre del elemento
+        space.element = GMOD[space.type][Parts[1]]
+        space.element = GMOD.copy_with_format(space.element)
+        if not space.element then return end
+
+        --- Temperatura
+        if #Parts == 3 and Parts[2] == "t" then
+            space.temperature = tonumber(Parts[3])
+        end
+
+        --- Max y Min de la temperatura
+        if #Parts == 4 and Parts[2] == "t" then
+            space.minimum_temperature = tonumber(Parts[3])
+            space.maximum_temperature = tonumber(Parts[4])
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validación
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local That_MOD =
+            GMOD.get_id_and_name(space.element.name) or
+            { ids = "-", name = space.element.name }
+
+        space.effects = {}
+        for action, _ in pairs(This_MOD.actions) do
+            local Recipe_name =
+                GMOD.name .. That_MOD.ids ..
+                This_MOD.id .. "-" ..
+                action .. "-" ..
+                That_MOD.name ..
+                (#Parts > 1 and "-" .. table.concat(Parts, "-", 2) or "")
+
+            table.insert(space.effects, {
+                type = "unlock-recipe",
+                recipe = Recipe_name
+            })
+
+            if data.raw.recipe[Recipe_name] then return end
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Guardar la información
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Nombre según acción
+        space.sell = space.effects[1].recipe
+        space.buy = space.effects[2].recipe
+
+        --- Precio en moneda
+        space.coins.sell = Math:new()
+        for i = 1, space.segments, 1 do
+            space.coins.sell.value[i + 2] = space.coins.buy[i] or 0
+        end
+
+        space.coins.sell:div(2)
+        space.coins.sell = space.coins.sell:finish()
+
+        if space.recipe then
+            space.tech =
+                GMOD.name .. That_MOD.ids ..
+                This_MOD.id .. "-" ..
+                That_MOD.name
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Guardar la información
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        Spaces[space.type] = Spaces[space.type] or {}
+        Spaces[space.type][space.name] = space
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Buscar los elements a afectar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    for element_type, elements in pairs(This_MOD.to_be_processed.prices) do
+        for element_name, value in pairs(elements) do
+            create_space({
+                type = element_type,
+                name = element_name,
+                coins = { buy = value.price },
+                recipe = value.recipe,
+                segments = value.segments,
+            })
+        end
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+---------------------------------------------------------------------------------------------------
+
+function This_MOD.create_recipe_to_elements(space)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     if not space.coins then return end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Crear la recipe
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Funciones auxiliares
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function format_coins(coins)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Contenedor
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Output = {}
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Cambiar el formato
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for key, value in pairs(coins) do
+            table.insert(Output, {
+                type = "item",
+                amount = value,
+                name = This_MOD.coin_name .. "-" .. key,
+                ignored_by_productivity = 0,
+                ignored_by_stats = value
+            })
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Devolver el resultado
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        return Output
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
 
     local function create_recipe(action, value)
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Validación
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-        if not space.coins[action] then return end
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-
-
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Crear la receta
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         local Recipe = GMOD.copy(This_MOD.recipe_base)
 
         Recipe.name = space[action]
         Recipe.energy_required = 0.002
         Recipe.order = space.element.order
-        Recipe.categories = { This_MOD.prefix .. action }
+        Recipe.category = This_MOD.prefix .. action
         Recipe.localised_name = space.element.localised_name
         Recipe.icons = GMOD.copy(space.element.icons)
+        Recipe.enabled = space.recipe == nil
 
         if value == This_MOD.actions.sell then
             Recipe.localised_name = { "item-name.coin" }
             table.insert(Recipe.icons, {
-                icon = GMOD.items[This_MOD.coin_name .. "-1"].icons[1].icon,
+                icon = GMOD.item[This_MOD.coin_name .. "-1"].icons[1].icon,
                 scale =
                     (GMOD.d01b and GMOD.has_id(space.element.name, GMOD.d01b.id)) and
                     0.35 or 0.25,
@@ -2096,22 +2135,23 @@ function This_MOD.create_recipe_to_effect(space)
         Recipe[value[1]] = { {
             type = space.type,
             amount = 1,
+            temperature = space.temperature,
             name = space.element.name,
             ignored_by_productivity = 0,
             ignored_by_stats = 1
         } }
 
-        Recipe[value[2]] = space.coins[action]
+        Recipe[value[2]] = format_coins(space.coins[action])
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Crear el subgrupo para el objeto
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         --- Duplicar el subgrupo
         if not GMOD.subgroups[Recipe.subgroup] then
@@ -2123,32 +2163,33 @@ function This_MOD.create_recipe_to_effect(space)
             local Index = value == This_MOD.actions.buy and 6 or 7
 
             --- Actualizar el order
-            Subgroup.order = Index .. Order:sub(2)
+            Subgroup.order = Index .. Order
         end
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Crear el prototipo
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         GMOD.extend(Recipe)
 
-        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Crear las recipes
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
 
     for action, value in pairs(This_MOD.actions) do
         create_recipe(action, value)
@@ -2157,28 +2198,29 @@ function This_MOD.create_recipe_to_effect(space)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
-function This_MOD.create_tech_to_effect(space)
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+function This_MOD.create_tech_to_element(space)
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Validación
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     if not This_MOD.setting.tech then return end
+    if not space.tech then return end
     if not space.coins then return end
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
 
 
 
 
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     --- Cambiar algunas propiedades
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     --- Tipo y nombre
     local Tech = {}
     Tech.type = "technology"
-    Tech.name = space.name .. "-tech"
+    Tech.name = space.tech .. "-tech"
 
     --- Apodo y descripción
     Tech.localised_name = space.element.localised_name
